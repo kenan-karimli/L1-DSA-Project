@@ -1,0 +1,67 @@
+# --- Build output ---
+build/
+bin/
+obj/
+*.o
+*.obj
+*.d
+*.a
+*.lib
+*.so
+*.dll
+*.dylib
+*.exe
+*.out
+*.app
+a.out
+
+# --- Debugging / profiling ---
+core
+core.*
+vgcore.*
+*.dSYM/
+*.pdb
+*.ilk
+*.gcno
+*.gcda
+*.gcov
+gmon.out
+compile_commands.json
+.cache/
+
+# --- IDEs / editors ---
+# CLion / JetBrains
+.idea/
+cmake-build-*/
+# VS Code
+.vscode/
+*.code-workspace
+# Visual Studio
+.vs/
+*.sln
+*.vcxproj*
+*.suo
+*.user
+# Code::Blocks
+*.cbp
+*.layout
+*.depend
+# Dev-C++
+*.dev
+# Vim / Emacs / others
+*.swp
+*.swo
+*~
+\#*\#
+.#*
+
+# --- OS junk ---
+.DS_Store
+._*
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# --- Tools ---
+.claude/settings.local.json
+.env
