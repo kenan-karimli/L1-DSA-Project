@@ -37,9 +37,9 @@ run: $(APP)
 test: $(TEST_BIN)
 	./$(TEST_BIN)
 
-# Rebuild everything with sanitizers: crashes on leaks, overflows, use-after-free
-debug: clean
-	$(MAKE) CFLAGS="$(CFLAGS) -fsanitize=address,undefined" LDFLAGS="-fsanitize=address,undefined" all test
+# Build into build/debug with sanitizers: crashes on leaks, overflows, use-after-free
+debug:
+	$(MAKE) BUILD_DIR=$(BUILD_DIR)/debug CFLAGS="$(CFLAGS) -fsanitize=address,undefined" LDFLAGS="-fsanitize=address,undefined" all test
 
 clean:
 	rm -rf $(BUILD_DIR)
