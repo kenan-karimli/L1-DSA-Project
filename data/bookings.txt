@@ -1,0 +1,11 @@
+LastName;FirstName;Age;Room Number;City
+ANTOINE;Michel;40;38;Bordeaux
+MARTIN;Lucie;32;45;Lille
+DUPOND;Antoine;42;25;Toulouse
+LECLERC;Denis;25;112;Lyon
+DUPOND;Agathe;23;12;Bordeaux
+DUPOND;François;35;29;Paris
+DUPONT;Amélie;28;17;Lille
+DURAND;Antoine;42;15;Paris
+DUVAL;Magali;40;38;Bordeaux
+MARTIN;Alain;42;112;Paris

@@ -6,6 +6,8 @@ BUILD_DIR = build
 APP       = $(BUILD_DIR)/app
 TEST_BIN  = $(BUILD_DIR)/test
 SUBMIT_DIR = submit
+LIB_SO    = $(BUILD_DIR)/libhotel.so
+PYTHON   ?= python3
 
 # Every src/*.c is picked up automatically; main.c is left out of the tests
 SRC      = $(wildcard src/*.c)
@@ -18,7 +20,7 @@ OBJ      = $(SRC:%.c=$(BUILD_DIR)/%.o)
 LIB_OBJ  = $(LIB_SRC:%.c=$(BUILD_DIR)/%.o)
 TEST_OBJ = $(TEST_SRC:%.c=$(BUILD_DIR)/%.o)
 
-.PHONY: all run test debug clean submit
+.PHONY: all run test debug clean submit lib gui
 
 all: $(APP)
 
@@ -33,6 +35,17 @@ $(TEST_BIN): $(LIB_OBJ) $(TEST_OBJ)
 $(BUILD_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
+
+# Shared library for the Python GUI (gui/hotel_gui.py loads it with ctypes)
+$(LIB_SO): $(LIB_SRC) $(wildcard include/*.h)
+	@mkdir -p $(dir $@)
+	$(CC) -Wall -Wextra -std=c11 -Iinclude -fPIC -shared $(LIB_SRC) -o $@
+
+lib: $(LIB_SO)
+
+# Needs a Python with tkinter, e.g. make gui PYTHON=~/miniconda3/bin/python3
+gui: $(LIB_SO)
+	$(PYTHON) gui/hotel_gui.py
 
 run: $(APP)
 	./$(APP)
