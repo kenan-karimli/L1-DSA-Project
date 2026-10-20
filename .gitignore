@@ -65,3 +65,6 @@ $RECYCLE.BIN/
 # --- Tools ---
 .claude/settings.local.json
 .env
+
+# --- Generated submission files (make submit) ---
+submit/

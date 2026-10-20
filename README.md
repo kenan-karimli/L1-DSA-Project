@@ -10,7 +10,8 @@ Final project for the UFAZ Data Structures & Algorithms course, written in C.
 | `make run`   | build and run                                        |
 | `make test`  | build and run the tests in `tests/`                  |
 | `make debug` | build `build/debug/app` with AddressSanitizer (catches memory bugs), run tests |
-| `make clean` | delete `build/`                                      |
+| `make submit` | merge modules into `submit/tp3.h`, `submit/tp3.c`, `submit/main.c` and check they compile |
+| `make clean` | delete `build/` and `submit/`                        |
 
 ## Layout
 
