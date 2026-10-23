@@ -43,7 +43,7 @@ $(LIB_SO): $(LIB_SRC) $(wildcard include/*.h)
 
 lib: $(LIB_SO)
 
-# needs python with tkinter, for me: make gui PYTHON=~/miniconda3/bin/python3
+# needs python with tkinter, e.g. make gui PYTHON=/path/to/python3
 gui: $(LIB_SO)
 	$(PYTHON) gui/hotel_gui.py
 

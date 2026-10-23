@@ -43,6 +43,42 @@ void test_file(void)
     remove(saved);
     freeHotel(copy);
 
+    /* chain file: empty site has to survive, and clients must be exactly the same */
+    addSite(hotel, createSite("Nantes"));
+    const char *chain = "build/test_chain_file.txt";
+    assert(saveChainFile(hotel, chain, "pbkdf2$1$ab$cd") == 10);
+    copy = createHotel("Copy");
+    loadBookings(copy, chain);
+    for (a = hotel->first, b = copy->first; a && b; a = a->next, b = b->next) {
+        assert(strcmp(a->city, b->city) == 0);
+        assert(a->number_clients == b->number_clients);
+        T_Client *x = a->first, *y = b->first;
+        for (; x && y; x = x->next, y = y->next) {
+            assert(compareNames(x->last_name, x->first_name, y->last_name, y->first_name) == 0);
+            assert(x->age == y->age && x->num_room == y->num_room);
+        }
+        assert(!x && !y);
+    }
+    assert(!a && !b);
+    assert(findSite(copy, "Nantes") && findSite(copy, "Nantes")->number_clients == 0);
+    assert(saveChainFile(hotel, chain, NULL) == -1);
+    assert(saveChainFile(hotel, chain, "") == 10);   /* no file password */
+    remove(chain);
+    freeHotel(copy);
+
+    /* # lines are not bookings: #HOTEL and unknown ones are ignored, #SITE makes a site */
+    FILE *f = fopen(chain, "w");
+    fprintf(f, "#HOTEL;Name;login;hash\n# just a comment\n#SITE;Rome\n"
+               "LastName;FirstName;Age;Room Number;City\nDOE;John;30;7;Oslo\n");
+    fclose(f);
+    copy = createHotel("Copy");
+    loadBookings(copy, chain);
+    assert(strcmp(copy->first->city, "Oslo") == 0 && copy->first->number_clients == 1);
+    assert(strcmp(copy->first->next->city, "Rome") == 0 && copy->first->next->number_clients == 0);
+    assert(!copy->first->next->next);
+    remove(chain);
+    freeHotel(copy);
+
     processingfile(NULL);
     freeHotel(hotel);
     printf("test_file passed.\n");

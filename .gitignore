@@ -69,5 +69,10 @@ $RECYCLE.BIN/
 # --- Generated submission files (make submit) ---
 submit/
 
-# --- Saved chain (menu option 11, web Save button) ---
+# --- Saved chain (menu option 11, tkinter Save button) ---
 data/saved_chain.txt
+
+# --- web app accounts and their chains (they have password hashes) ---
+data/accounts.txt
+data/chains/
+__pycache__/

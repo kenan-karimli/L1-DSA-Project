@@ -72,6 +72,7 @@ def load_library():
         "processingfile": ([POINTER(Hotel)], None),
         "loadBookings": ([POINTER(Hotel), c_char_p], None),
         "saveHotel": ([POINTER(Hotel), c_char_p], c_int),
+        "saveChainFile": ([POINTER(Hotel), c_char_p, c_char_p], c_int),
     }
     for name, (args, res) in signatures.items():
         func = getattr(lib, name)

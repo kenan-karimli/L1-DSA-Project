@@ -3,170 +3,971 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hotel Chain Manager</title>
+<title>Hotel Chain Manager · UFAZ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
 <style>
-  :root { --bg: #f6f7f9; --card: #fff; --line: #d9dde3; --text: #1d2330; --muted: #667085; --accent: #2f6fde; --bad: #c0392b; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #15181e; --card: #1e222a; --line: #333a46; --text: #e6e8ec; --muted: #98a2b3; --accent: #6b9bff; --bad: #ff7b6b; }
+  :root {
+    --bg: #f5ede0; --panel: #ebe4d2; --surface: #fbf6ec; --focus: #fffaf2;
+    --line: #d8cfbc; --card-line: #e2d9c6; --dash: #c9bfaa; --row: #e7dfcd; --head-line: #ddd3bf;
+    --ink: #2a2925; --muted: #6b675d; --placeholder: #9a9384;
+    --forest: #2e4a3a; --forest-hover: #233a2d; --on-forest: #c9d3cb;
+    --terra: #c3512d; --terra-dark: #a8411f; --danger-line: #d9a38f;
+    --err-bg: #f3d9cc; --err-ink: #7a2e15; --hover: #ebe3d1;
+    --serif: 'Instrument Serif', Georgia, serif; --mono: 'DM Mono', monospace;
+    --ease: cubic-bezier(.2,.7,.2,1);
   }
   * { box-sizing: border-box; }
-  body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, sans-serif; }
-  h1 { font-size: 20px; margin: 0; flex: 1; }
-  h2 { font-size: 15px; margin: 0 0 8px; }
-  .bar, .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-  .bar { margin-bottom: 12px; }
-  .grid { display: grid; grid-template-columns: minmax(220px, 1fr) 3fr; gap: 12px; }
-  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
-  section { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 12px; overflow-x: auto; }
-  input { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; min-width: 0; }
-  button { padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--text); font: inherit; cursor: pointer; }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  button.danger { color: var(--bad); }
-  table { width: 100%; border-collapse: collapse; margin: 6px 0; }
-  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); }
-  th { color: var(--muted); font-weight: 600; font-size: 13px; }
-  tr.pick { cursor: pointer; }
-  tr.selected td { background: color-mix(in srgb, var(--accent) 18%, transparent); }
-  .empty { color: var(--muted); }
-  #status { position: sticky; bottom: 0; padding: 8px 12px; border-radius: 6px; background: var(--card); border: 1px solid var(--line); }
-  #status.error { color: var(--bad); }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.5 "DM Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  button, input { font-family: inherit; color: inherit; }
+  button { cursor: pointer; }
+  input::placeholder { color: var(--placeholder); }
+  input:focus { outline: none; }
+  input:not(.bare):focus, .search-pill:focus-within { border-color: var(--forest) !important; background: var(--focus) !important; }
+  button:focus-visible { outline: 2px solid var(--terra); outline-offset: 2px; }
+  h1, h2, h3 { margin: 0; font-weight: 400; font-family: var(--serif); }
+  .kicker { font-size: 13px; color: var(--terra); display: flex; align-items: center; gap: 6px; }
+  .muted { color: var(--muted); }
+
+  @keyframes rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes shake { 10%, 90% { transform: translateX(-2px); } 20%, 80% { transform: translateX(4px); } 30%, 50%, 70% { transform: translateX(-6px); } 40%, 60% { transform: translateX(6px); } }
+  @keyframes drift { 0%, 100% { transform: translate(0, 0) rotate(0); } 50% { transform: translate(12px, -10px) rotate(4deg); } }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- intro ---------- */
+  #intro { position: relative; min-height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+  .blob { position: absolute; border-radius: 50%; }
+  .blob.one { right: -120px; top: -140px; width: 520px; height: 520px; background: var(--panel); animation: drift 14s ease-in-out infinite; }
+  .blob.two { left: -160px; bottom: -200px; width: 460px; height: 460px; border: 1px solid var(--line); animation: drift 18s ease-in-out infinite reverse; }
+  .topline { font-size: 13px; color: var(--muted); }
+  #intro .topline { position: relative; max-width: 1080px; width: 100%; margin: 0 auto; padding: 28px 40px; animation: fade .8s both; }
+  .intro-main { position: relative; flex: 1; max-width: 1080px; width: 100%; margin: 0 auto; padding: 24px 40px 64px; display: flex; flex-direction: column; justify-content: center; gap: 48px; }
+  .intro-text { display: flex; flex-direction: column; gap: 14px; }
+  .intro-kicker { font-size: 14px; color: var(--terra); animation: rise .6s .1s var(--ease) both; }
+  .intro-title { font: 400 clamp(56px, 10vw, 128px)/.95 var(--serif); letter-spacing: -.02em; animation: rise .8s .2s var(--ease) both; }
+  .intro-title em { color: var(--forest); }
+  .lead { margin: 0; max-width: 520px; font-size: 16px; color: var(--muted); animation: rise .8s .35s var(--ease) both; }
+  .options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 16px; max-width: 1000px; }
+  .option { display: flex; flex-direction: column; align-items: flex-start; gap: 28px; padding: 24px; border: 0; border-radius: 16px; text-align: left; transition: transform .2s; }
+  .option:hover { transform: translateY(-3px); }
+  .option > i { font-size: 32px; }
+  .option-text { display: flex; flex-direction: column; gap: 4px; }
+  .option-title { font: 400 32px/1.05 var(--serif); }
+  .option-sub { font-size: 14px; }
+  .option.create { background: var(--forest); color: var(--bg); animation: rise .7s .5s var(--ease) both; }
+  .option.create .option-sub { color: var(--on-forest); }
+  .option.light { background: var(--surface); border: 1px solid var(--line); color: var(--ink); animation: rise .7s .62s var(--ease) both; }
+  .option.light + .option.light { animation-delay: .74s; }
+  .option.light > i { color: var(--terra); }
+  .option.light .option-sub { color: var(--muted); }
+  .intro-errors { display: flex; flex-direction: column; gap: 12px; max-width: 1000px; animation: fade .6s .9s both; }
+
+  /* ---------- error banner ---------- */
+  .err { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--err-bg); color: var(--err-ink); font-size: 14px; animation: shake .45s; }
+  .err i { font-size: 20px; flex: none; }
+
+  /* ---------- auth cards ---------- */
+  .auth { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
+  .auth-card { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 20px; animation: rise .5s var(--ease) both; }
+  .back { align-self: flex-start; height: 32px; padding: 0 12px 0 8px; border: 0; border-radius: 16px; background: transparent; color: var(--muted); font: 500 13px 'DM Sans', sans-serif; display: flex; align-items: center; gap: 6px; }
+  .back:hover { background: var(--hover); }
+  .back i { font-size: 16px; }
+  .auth-head { display: flex; flex-direction: column; gap: 6px; }
+  .auth-head i { font-size: 16px; }
+  .auth-head h1 { font: 400 48px/1 var(--serif); }
+  .fields { display: flex; flex-direction: column; gap: 14px; }
+  .fields label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+  .fields input { height: 44px; padding: 0 16px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); font: 400 15px 'DM Sans', sans-serif; color: var(--ink); }
+  .primary { height: 48px; padding: 0 22px 0 18px; border: 0; border-radius: 24px; background: var(--forest); color: var(--bg); font: 500 15px 'DM Sans', sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .primary:hover, .green:hover, .add-site:hover { background: var(--forest-hover); }
+  .primary i { font-size: 18px; }
+
+  /* ---------- app ---------- */
+  #app { min-height: 100vh; display: flex; flex-direction: column; animation: fade .5s both; }
+  .wrap { max-width: 1280px; width: 100%; margin: 0 auto; }
+  .topbar { padding: 24px 40px 0; display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; }
+  .tools { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill { height: 36px; padding: 0 14px 0 12px; border: 1px solid var(--line); border-radius: 18px; background: transparent; font: 500 13px 'DM Sans', sans-serif; display: flex; align-items: center; gap: 8px; }
+  .pill:hover { background: var(--hover); }
+  .pill i { font-size: 18px; color: var(--terra); }
+  .app-head { padding: 40px 40px 32px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; justify-content: space-between; animation: rise .6s .05s var(--ease) both; }
+  .app-head > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .app-head h1 { font: 400 clamp(48px, 7vw, 84px)/1 var(--serif); letter-spacing: -.01em; text-wrap: pretty; overflow-wrap: anywhere; }
+  .chip { height: 36px; padding: 0 14px 0 6px; border-radius: 18px; background: var(--panel); display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .chip b { font-weight: 600; }
+  .avatar { width: 26px; height: 26px; border-radius: 13px; background: var(--forest); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  main { flex: 1; padding: 0 40px 120px; display: flex; flex-direction: column; gap: 40px; animation: rise .7s .15s var(--ease) both; }
+  .locations { display: flex; flex-direction: column; gap: 20px; }
+  .section-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 24px; border-top: 1px solid var(--line); padding-top: 24px; }
+  .section-head h2 { font: 400 36px/1.1 var(--serif); }
+  .titles { display: flex; flex-direction: column; gap: 2px; }
+  .hint { font-size: 13px; color: var(--muted); }
+  .site-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+  .site { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; padding: 16px 16px 14px; border: 1px solid var(--card-line); border-radius: 12px; background: var(--surface); color: var(--ink); text-align: left; min-width: 0; }
+  .site:hover { border-color: var(--forest); }
+  .site-top { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 8px; }
+  .site-top i { font-size: 22px; color: var(--terra); }
+  .site-count { font: 400 12px var(--mono); color: var(--muted); }
+  .site-city { font: 400 30px/1.2 var(--serif); margin-bottom: -4px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .site.sel { background: var(--forest); border-color: var(--forest); color: var(--bg); }
+  .site.sel .site-top i { color: var(--bg); }
+  .site.sel .site-count { color: var(--on-forest); }
+  .new-site { display: flex; flex-direction: column; justify-content: space-between; gap: 12px; padding: 14px; border: 1px dashed var(--dash); border-radius: 12px; min-height: 106px; }
+  .new-site span { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+  .new-site span i { font-size: 18px; color: var(--terra); }
+  .new-site form { display: flex; gap: 6px; }
+  .new-site input { flex: 1; min-width: 0; height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); font: 400 14px 'DM Sans', sans-serif; }
+  .add-site { width: 36px; height: 36px; flex: none; border: 0; border-radius: 18px; background: var(--forest); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+
+  .panels { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+  .panel { min-width: 0; background: var(--panel); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+  .panel h2 { font: 400 32px/1.1 var(--serif); }
+  .panel.customers { flex: 999 1 520px; }
+  .panel.search { flex: 1 1 340px; }
+  .panel-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+  .danger-pill { height: 34px; padding: 0 14px 0 10px; border: 1px solid var(--danger-line); border-radius: 17px; background: transparent; color: var(--terra-dark); font: 500 13px 'DM Sans', sans-serif; display: flex; align-items: center; gap: 6px; }
+  .danger-pill:hover { background: var(--err-bg); }
+  .danger-pill i { font-size: 16px; }
+  .table-box { background: var(--bg); border-radius: 8px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 480px; }
+  th { text-align: left; padding: 12px; font: 400 12px var(--mono); color: var(--muted); border-bottom: 1px solid var(--head-line); }
+  td { padding: 11px 12px; border-bottom: 1px solid var(--row); }
+  th:first-child, td:first-child { padding-left: 16px; }
+  td:first-child { font-weight: 500; }
+  .num { text-align: right; }
+  td.num { font-family: var(--mono); font-size: 13px; }
+  tbody tr:hover { background: var(--surface); }
+  td.del { padding: 4px 10px 4px 0; text-align: right; width: 52px; }
+  .trash { width: 32px; height: 32px; border: 0; border-radius: 16px; background: transparent; color: var(--placeholder); display: inline-flex; align-items: center; justify-content: center; font-size: 17px; }
+  .trash:hover { background: var(--err-bg); color: var(--terra-dark); }
+  .empty { display: flex; align-items: center; gap: 10px; padding: 24px 16px; color: var(--muted); }
+  .empty i { font-size: 22px; color: var(--terra); }
+  .new-booking { display: flex; flex-direction: column; gap: 8px; }
+  .caption { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+  .caption i { font-size: 16px; color: var(--terra); }
+  .booking-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .booking-row input { height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: 20px; background: var(--bg); font: 400 14px 'DM Sans', sans-serif; min-width: 0; }
+  .booking-row .name { flex: 1 1 130px; }
+  .booking-row input[type=number] { font-family: var(--mono); }
+  #age { width: 80px; }
+  #room { width: 92px; }
+  .green { height: 40px; padding: 0 18px 0 14px; border: 0; border-radius: 20px; background: var(--forest); color: var(--bg); font: 500 14px 'DM Sans', sans-serif; display: flex; align-items: center; gap: 8px; }
+  .green i { font-size: 16px; }
+  .search-form { display: flex; gap: 8px; }
+  .search-pill { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 6px 0 14px; border: 1px solid var(--line); border-radius: 20px; background: var(--bg); }
+  .search-pill i { font-size: 17px; color: var(--terra); }
+  .search-pill input { flex: 1; min-width: 0; height: 36px; padding: 0; border: 0; outline: none; background: transparent; font: 400 14px 'DM Sans', sans-serif; }
+  .search-form .green { padding: 0 18px; }
+  .results { display: flex; flex-direction: column; gap: 6px; }
+  .result { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--bg); border-radius: 8px; }
+  .result > i { font-size: 18px; color: var(--forest); }
+  .result-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .result-name { font-weight: 500; overflow-wrap: anywhere; }
+  .result-meta { font: 400 12px var(--mono); color: var(--muted); }
+  .city-chip { height: 26px; padding: 0 10px 0 8px; border-radius: 13px; background: var(--forest); color: var(--bg); display: flex; align-items: center; gap: 4px; font-size: 12px; white-space: nowrap; }
+  .city-chip i { font-size: 13px; }
+  .clear { align-self: flex-start; margin-top: 4px; height: 30px; padding: 0 12px; border: 0; border-radius: 15px; background: transparent; color: var(--terra); font: 500 13px 'DM Sans', sans-serif; }
+  .clear:hover { background: #e2d9c4; }
+  .no-match { display: flex; align-items: center; gap: 10px; padding: 14px 12px; background: var(--bg); border-radius: 8px; color: var(--muted); }
+  .no-match i { font-size: 20px; color: var(--terra); }
+
+  /* ---------- toast, dialog, veil ---------- */
+  #toast { position: fixed; left: 24px; bottom: 24px; z-index: 20; max-width: min(460px, calc(100vw - 48px)); display: flex; align-items: center; gap: 12px; padding: 10px 8px 10px 16px; background: var(--forest); color: var(--bg); border-radius: 24px; box-shadow: 0 10px 30px rgba(46,74,58,.25); animation: toastIn .2s ease-out; }
+  #toast.bad { background: var(--terra-dark); }
+  #toast > i { font-size: 20px; }
+  #toast-text { flex: 1; font: 400 13px/1.4 var(--mono); overflow-wrap: anywhere; }
+  #toast button { width: 30px; height: 30px; flex: none; border: 0; border-radius: 15px; background: rgba(245,237,224,.12); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  #dialog, #pw-dialog { position: fixed; inset: 0; z-index: 30; background: rgba(42,41,37,.35); display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .dialog-card { background: var(--bg); border-radius: 16px; width: 100%; max-width: 420px; padding: 28px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 24px 60px rgba(42,41,37,.25); }
+  .dialog-card > i { font-size: 32px; color: var(--terra); }
+  .dialog-card h3 { font: 400 32px/1.1 var(--serif); }
+  .dialog-card p { margin: 0; overflow-wrap: anywhere; }
+  .dialog-buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+  .cancel { height: 40px; padding: 0 18px; border: 1px solid var(--line); border-radius: 20px; background: transparent; font: 500 14px 'DM Sans', sans-serif; }
+  .cancel:hover { background: var(--hover); }
+  .confirm { height: 40px; padding: 0 18px; border: 0; border-radius: 20px; background: var(--terra); color: #fff; font: 500 14px 'DM Sans', sans-serif; }
+  .confirm:hover { background: var(--terra-dark); }
+  /* the veil only animates transform + opacity: clip-path animations gave black flashes on some GPUs */
+  #veil { position: fixed; inset: 0; z-index: 60; pointer-events: none; visibility: hidden; overflow: hidden; }
+  #veil-stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #veil-circle { position: absolute; border-radius: 50%; }
+  #veil-inner { position: relative; display: flex; flex-direction: column; align-items: center; gap: 14px; opacity: 0; }
+  #veil-icon { font-size: 56px; }
+  #veil-label { font: 400 clamp(36px, 6vw, 64px)/1 var(--serif); text-align: center; padding: 0 24px; }
+
+  /* ---------- my chains ---------- */
+  .chain-card { position: relative; display: flex; min-width: 0; }
+  .chain-card .site { flex: 1; min-height: 116px; }
+  .chain-card .site-top { justify-content: flex-start; gap: 6px; }
+  .chain-card .site-top { padding-right: 32px; }
+  .chain-card .site-count { margin-top: -12px; }
+  .chain-card .trash { position: absolute; right: 8px; top: 10px; }
+  .site-top .lock { font-size: 16px; color: var(--muted); }
+  .new-chain { display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px; border: 1px dashed var(--dash); border-radius: 12px; min-height: 116px; background: transparent; color: var(--muted); font: 500 14px 'DM Sans', sans-serif; text-align: left; }
+  .new-chain:hover { border-color: var(--forest); color: var(--ink); }
+  .new-chain i { font-size: 22px; color: var(--terra); }
+  .new-chain span { font: 400 30px/1.2 var(--serif); color: var(--ink); }
+  .chains-err { max-width: 760px; }
+  .dialog-card .fields input { background: var(--surface); }
+  .dialog-card .green { justify-content: center; }
+
+  @media (max-width: 600px) {
+    #intro .topline, .intro-main, .topbar, .app-head, main { padding-left: 16px; padding-right: 16px; }
+  }
 </style>
 </head>
 <body>
-  <div class="bar">
-    <h1 id="title">No hotel chain</h1>
-    <input id="chain" placeholder="Chain name" aria-label="Chain name">
-    <button class="primary" onclick="createChain()">Create chain</button>
-    <button onclick="act('load_file')">Load bookings file</button>
-    <button onclick="act('save')">Save</button>
-    <button onclick="act('load_saved')">Load saved</button>
-  </div>
+<input type="file" id="file-input" accept=".txt,.csv,text/plain" hidden>
 
-  <div class="grid">
-    <section>
-      <h2>Locations</h2>
-      <table><thead><tr><th>City</th><th>Customers</th></tr></thead><tbody id="sites"></tbody></table>
-      <div class="row">
-        <input id="city" placeholder="City" aria-label="City">
-        <button onclick="addSite()">Add location</button>
+<!-- 1. intro -->
+<div id="intro" hidden>
+  <div class="blob one"></div>
+  <div class="blob two"></div>
+  <div class="topline">UFAZ · L1 Data Structures &amp; Algorithms · Final project</div>
+  <div class="intro-main">
+    <div class="intro-text">
+      <span class="intro-kicker">Hotel chain management in C</span>
+      <h1 class="intro-title">Hotel Chain<br><em>Manager</em></h1>
+      <p class="lead">Locations and bookings kept in sorted linked lists. Log in to keep all your chains, or open a file as a guest.</p>
+    </div>
+    <div class="options">
+      <button class="option create" id="to-login">
+        <i class="ph-duotone ph-sign-in"></i>
+        <span class="option-text"><span class="option-title">Log in</span><span class="option-sub">Open your account and all your chains.</span></span>
+      </button>
+      <button class="option light" id="to-signup">
+        <i class="ph-duotone ph-user-plus"></i>
+        <span class="option-text"><span class="option-title">Create account</span><span class="option-sub">Pick a login and a password.</span></span>
+      </button>
+      <button class="option light pick-file">
+        <i class="ph-duotone ph-folder-open"></i>
+        <span class="option-text"><span class="option-title">Open a file</span><span class="option-sub">No account needed. Asks for the file password only if it has one.</span></span>
+      </button>
+    </div>
+    <div class="intro-errors"><div class="err" hidden><i class="ph-duotone ph-warning-circle"></i><span></span></div></div>
+  </div>
+</div>
+
+<!-- 2. log in -->
+<div id="login" class="auth" hidden>
+  <form class="auth-card" novalidate>
+    <button type="button" class="back"><i class="ph-duotone ph-arrow-left"></i>Back</button>
+    <div class="auth-head">
+      <span class="kicker">Account</span>
+      <h1>Log in</h1>
+      <span class="muted">Your chains are saved to your account.</span>
+    </div>
+    <div class="fields">
+      <label>Login<input name="login" type="text" placeholder="e.g. hotel_admin" autocomplete="username"></label>
+      <label>Password<input name="password" type="password" placeholder="Password" autocomplete="current-password"></label>
+    </div>
+    <div class="err" hidden><i class="ph-duotone ph-warning-circle"></i><span></span></div>
+    <button class="primary"><i class="ph-duotone ph-sign-in"></i>Log in</button>
+  </form>
+</div>
+
+<!-- 3. create account -->
+<div id="signup" class="auth" hidden>
+  <form class="auth-card" novalidate>
+    <button type="button" class="back"><i class="ph-duotone ph-arrow-left"></i>Back</button>
+    <div class="auth-head">
+      <span class="kicker">New account</span>
+      <h1>Create an account</h1>
+      <span class="muted">The login can use letters, numbers, _ and -.</span>
+    </div>
+    <div class="fields">
+      <label>Login<input name="login" type="text" placeholder="e.g. hotel_admin" autocomplete="username"></label>
+      <label>Password<input name="password" type="password" placeholder="At least 4 characters" autocomplete="new-password"></label>
+      <label>Confirm password<input name="password2" type="password" placeholder="Repeat the password" autocomplete="new-password"></label>
+    </div>
+    <div class="err" hidden><i class="ph-duotone ph-warning-circle"></i><span></span></div>
+    <button class="primary"><i class="ph-duotone ph-user-plus"></i>Create account</button>
+  </form>
+</div>
+
+<!-- 4. file password (a protected file was chosen) -->
+<div id="unlock" class="auth" hidden>
+  <form class="auth-card" novalidate>
+    <button type="button" class="back"><i class="ph-duotone ph-arrow-left"></i>Back</button>
+    <div class="auth-head">
+      <span class="kicker"><i class="ph-duotone ph-lock-key"></i><span id="unlock-file"></span></span>
+      <h1 id="unlock-title"></h1>
+      <span class="muted"><span id="unlock-info"></span> This file is protected.</span>
+    </div>
+    <div class="fields">
+      <label>File password<input name="password" type="password" placeholder="File password" autocomplete="off"></label>
+    </div>
+    <div class="err" hidden><i class="ph-duotone ph-warning-circle"></i><span></span></div>
+    <button class="primary"><i class="ph-duotone ph-lock-key-open"></i>Open chain</button>
+  </form>
+</div>
+
+<!-- 5. new chain (account) -->
+<div id="newchain" class="auth" hidden>
+  <form class="auth-card" novalidate>
+    <button type="button" class="back"><i class="ph-duotone ph-arrow-left"></i>Back</button>
+    <div class="auth-head">
+      <span class="kicker">New chain</span>
+      <h1>Create a chain</h1>
+      <span class="muted">The file password is optional. Anyone who opens the .txt file will need it.</span>
+    </div>
+    <div class="fields">
+      <label>Chain name<input name="name" type="text" placeholder="e.g. UFAZ Hotels"></label>
+      <label>File password (optional)<input name="password" type="password" placeholder="Leave empty for no password" autocomplete="new-password"></label>
+      <label>Confirm file password<input name="password2" type="password" placeholder="Repeat it" autocomplete="new-password"></label>
+    </div>
+    <div class="err" hidden><i class="ph-duotone ph-warning-circle"></i><span></span></div>
+    <button class="primary"><i class="ph-duotone ph-buildings"></i>Create chain</button>
+  </form>
+</div>
+
+<!-- 6. my chains -->
+<div id="chains" hidden>
+  <div class="wrap topbar">
+    <span class="topline">UFAZ · L1 Data Structures &amp; Algorithms · Final project</span>
+    <div class="tools">
+      <button class="pill pick-file"><i class="ph-duotone ph-folder-open"></i>Open a file</button>
+      <button class="pill" id="logout"><i class="ph-duotone ph-sign-out"></i>Log out</button>
+    </div>
+  </div>
+  <header class="wrap app-head">
+    <div>
+      <span class="kicker">Your account</span>
+      <h1>My chains</h1>
+      <span class="muted" id="chain-count"></span>
+    </div>
+    <span class="chip"><span class="avatar"><i class="ph-duotone ph-user"></i></span>Signed in as <b class="user-name"></b></span>
+  </header>
+  <main class="wrap">
+    <section class="locations">
+      <div class="section-head">
+        <div class="titles"><span class="kicker" id="chains-folder"></span><h2>Chains</h2></div>
+        <span class="hint">Pick a chain to open it. Changes are saved automatically.</span>
       </div>
-      <p><button class="danger" onclick="deleteSite()">Delete selected location</button></p>
+      <div class="err chains-err" hidden><i class="ph-duotone ph-warning-circle"></i><span></span></div>
+      <div class="site-grid" id="chain-list">
+        <button class="new-chain" id="to-newchain"><i class="ph-duotone ph-plus-circle"></i><span>New chain</span></button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- 7. app -->
+<div id="app" hidden>
+  <div class="wrap topbar">
+    <span class="topline">UFAZ · L1 Data Structures &amp; Algorithms · Final project</span>
+    <div class="tools">
+      <button class="pill" id="load-sample"><i class="ph-duotone ph-file-arrow-up"></i>Add sample bookings</button>
+      <button class="pill" id="save"><i class="ph-duotone" id="save-icon"></i><span id="save-label">Save</span></button>
+      <button class="pill" id="file-password"><i class="ph-duotone ph-key"></i>File password</button>
+      <button class="pill" id="leave"><i class="ph-duotone" id="leave-icon"></i><span id="leave-label"></span></button>
+    </div>
+  </div>
+  <header class="wrap app-head">
+    <div>
+      <span class="kicker">Hotel chain</span>
+      <h1 id="chain-name"></h1>
+      <span class="muted" id="totals"></span>
+    </div>
+    <span class="chip"><span class="avatar"><i class="ph-duotone" id="who-icon"></i></span><span id="who"></span></span>
+  </header>
+  <main class="wrap">
+    <section class="locations">
+      <div class="section-head">
+        <div class="titles"><span class="kicker">hotel-&gt;first · sorted by city</span><h2>Locations</h2></div>
+        <span class="hint">Select a location to manage its bookings.</span>
+      </div>
+      <div class="site-grid" id="sites">
+        <div class="new-site" id="new-site">
+          <span><i class="ph-duotone ph-plus-circle"></i>New location</span>
+          <form id="site-form">
+            <input id="city" placeholder="City" aria-label="City">
+            <button class="add-site" aria-label="Add location" title="Add location"><i class="ph-duotone ph-plus"></i></button>
+          </form>
+        </div>
+      </div>
     </section>
 
-    <section>
-      <h2 id="clients-title">Customers (select a location)</h2>
-      <table><thead><tr><th>Last name</th><th>First name</th><th>Age</th><th>Room</th><th></th></tr></thead>
-        <tbody id="clients"></tbody></table>
-      <div class="row">
-        <input id="last_name" placeholder="Last name" aria-label="Last name">
-        <input id="first_name" placeholder="First name" aria-label="First name">
-        <input id="age" type="number" min="0" max="150" placeholder="Age" aria-label="Age" style="width:80px">
-        <input id="room" type="number" min="1" placeholder="Room" aria-label="Room" style="width:90px">
-        <button onclick="addClient()">Add booking</button>
-      </div>
-    </section>
+    <div class="panels">
+      <section class="panel customers">
+        <div class="panel-head">
+          <div class="titles"><span class="kicker">site-&gt;first</span><h2 id="clients-title"></h2></div>
+          <button class="danger-pill" id="delete-site" hidden><i class="ph-duotone ph-trash"></i>Delete location</button>
+        </div>
+        <div class="table-box">
+          <table>
+            <thead><tr><th>last_name</th><th>first_name</th><th class="num">age</th><th class="num">num_room</th><th></th></tr></thead>
+            <tbody id="clients"></tbody>
+          </table>
+          <div class="empty" id="no-selection"><i class="ph-duotone ph-hand-pointing"></i>Pick a location in the list above.</div>
+          <div class="empty" id="no-clients" hidden><i class="ph-duotone ph-user-circle-dashed"></i>No customers yet.</div>
+        </div>
+        <div class="new-booking">
+          <span class="caption"><i class="ph-duotone ph-user-plus"></i>New booking · inserted in sorted order</span>
+          <form class="booking-row" id="client-form">
+            <input class="name" id="last_name" placeholder="Last name" aria-label="Last name">
+            <input class="name" id="first_name" placeholder="First name" aria-label="First name">
+            <input id="age" type="number" min="0" max="150" placeholder="Age" aria-label="Age">
+            <input id="room" type="number" min="1" placeholder="Room" aria-label="Room">
+            <button class="green"><i class="ph-duotone ph-plus"></i>Add booking</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="panel search">
+        <div class="titles">
+          <span class="kicker">findClients</span>
+          <h2>Search by last name</h2>
+          <span class="hint">All locations, not case sensitive.</span>
+        </div>
+        <form class="search-form" id="search-form">
+          <div class="search-pill">
+            <i class="ph-duotone ph-magnifying-glass"></i>
+            <input class="bare" id="prefix" placeholder="e.g. dup" aria-label="Last name starts with">
+          </div>
+          <button class="green">Search</button>
+        </form>
+        <div class="results" id="results-box" hidden>
+          <div class="results" id="results"></div>
+          <button class="clear" id="clear-results">Clear results</button>
+        </div>
+        <div class="no-match" id="no-match" hidden><i class="ph-duotone ph-prohibit"></i>No customer matches that prefix.</div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div id="toast" role="status" hidden>
+  <i class="ph-duotone ph-check-circle" id="toast-icon"></i>
+  <span id="toast-text"></span>
+  <button id="toast-close" aria-label="Dismiss"><i class="ph-duotone ph-x"></i></button>
+</div>
+
+<div id="dialog" hidden>
+  <div class="dialog-card" role="alertdialog" aria-labelledby="dialog-title" aria-describedby="dialog-text">
+    <i class="ph-duotone ph-warning-circle"></i>
+    <h3 id="dialog-title">Are you sure?</h3>
+    <p id="dialog-text"></p>
+    <div class="dialog-buttons">
+      <button class="cancel" id="dialog-no">Cancel</button>
+      <button class="confirm" id="dialog-yes">Delete</button>
+    </div>
   </div>
+</div>
 
-  <section>
-    <h2>Search customers by last name (all locations)</h2>
-    <form class="row" onsubmit="search(); return false">
-      <input id="prefix" placeholder="Last name starts with" aria-label="Last name starts with">
-      <button>Search</button>
-    </form>
-    <table><thead><tr><th>Last name</th><th>First name</th><th>Age</th><th>Room</th><th>City</th></tr></thead>
-      <tbody id="results"></tbody></table>
-  </section>
+<div id="pw-dialog" class="dialog" hidden>
+  <form class="dialog-card" role="dialog" aria-labelledby="pw-title" novalidate>
+    <i class="ph-duotone ph-key"></i>
+    <h3 id="pw-title">File password</h3>
+    <p>Anyone who opens the .txt file will need it. Leave both empty to remove it.</p>
+    <div class="fields">
+      <label>New file password<input name="password" type="password" placeholder="At least 4 characters" autocomplete="new-password"></label>
+      <label>Confirm<input name="password2" type="password" placeholder="Repeat it" autocomplete="new-password"></label>
+    </div>
+    <div class="err" hidden><i class="ph-duotone ph-warning-circle"></i><span></span></div>
+    <div class="dialog-buttons">
+      <button type="button" class="cancel" id="pw-no">Cancel</button>
+      <button class="green">Save</button>
+    </div>
+  </form>
+</div>
 
-  <div id="status" role="status"></div>
+<div id="veil" aria-hidden="true">
+  <div id="veil-stage">
+    <div id="veil-circle"></div>
+    <div id="veil-inner"><i id="veil-icon"></i><span id="veil-label"></span></div>
+  </div>
+</div>
 
 <script>
-let chain = null, selected = null;
 const $ = id => document.getElementById(id);
-const val = id => $(id).value;
+const PHASES = ['intro', 'login', 'signup', 'unlock', 'newchain', 'chains', 'app'];
+// hotel = the open chain's lists, meta = {protected, guest, filename} of the open chain
+let phase = 'intro', hotel = null, meta = null, user = null, selected = null, results = null, dirty = false;
+let fileHandle = null, savedAs = '', busy = false, lastPt = null, onYes = null;
 
-function say(message, isError) {
-  $('status').textContent = message;
-  $('status').className = isError ? 'error' : '';
-}
+// the veil grows from the button you clicked, or from the middle if you pressed Enter
+document.addEventListener('pointerdown', e => {
+  const b = e.target.closest('button');
+  const r = b && b.getBoundingClientRect();
+  lastPt = r ? {x: r.left + r.width / 2, y: r.top + r.height / 2} : null;
+}, true);
+document.addEventListener('keydown', e => { if (e.key === 'Enter') lastPt = null; }, true);
 
-function cell(row, value) { row.insertCell().textContent = value; }
-
-async function call(path, body) {
-  const response = await fetch('/api/' + path, {method: 'POST', body: JSON.stringify(body || {})});
-  const data = await response.json();
-  say(data.error || data.message, !response.ok);
-  return data;
-}
-
-async function act(action, body, clearResults) {
-  const data = await call(action, body);
-  if (data.state !== undefined) render(data.state);
-  if (!data.error && clearResults) $('results').replaceChildren();
-  return !data.error;
-}
-
-function render(state) {
-  chain = state;
-  $('title').textContent = chain ? 'Hotel chain: ' + chain.name : 'No hotel chain';
-  const sites = chain ? chain.sites : [];
-  if (!sites.some(s => s.city === selected)) selected = null;
-  $('sites').replaceChildren();
-  if (!sites.length) $('sites').insertRow().insertCell().textContent = chain ? 'No locations yet.' : '';
-  for (const site of sites) {
-    const row = $('sites').insertRow();
-    row.className = 'pick' + (site.city === selected ? ' selected' : '');
-    row.onclick = () => { selected = site.city; render(chain); };
-    cell(row, site.city);
-    cell(row, site.clients.length);
+async function api(path, body) {
+  try {
+    const response = await fetch('/api/' + path, {method: 'POST', headers: {'Content-Type': 'application/json'},
+                                                  body: JSON.stringify(body || {})});
+    const data = await response.json();
+    data.ok = response.ok;
+    return data;
+  } catch (e) {
+    return {ok: false, error: 'Cannot reach the server. Is make web still running?'};
   }
+}
+
+// ---------- phases + veil ----------
+function go(next) {
+  phase = next;
+  PHASES.forEach(p => { $(p).hidden = p !== next; });
+  document.querySelectorAll('.err').forEach(el => { el.hidden = true; });
+  document.querySelectorAll('.auth form').forEach(f => f.reset());
+  const first = document.querySelector('#' + next + ' .fields input');
+  if (first) first.focus();
+  document.querySelectorAll('.user-name').forEach(el => { el.textContent = user || ''; });
+  if (next === 'app') render();
+  if (next === 'chains') loadChains();
+  window.scrollTo(0, 0);
+}
+
+// the veil: a big circle grows from the button (transform: scale), the screen is swapped under it,
+// then the veil slides up while the stage inside slides down by the same amount, so it looks like
+// the bottom edge is wiping upward. only transform/opacity are animated, clip-path and blur
+// animations gave black flashes on some GPUs
+async function transit(o, swap) {
+  const veil = $('veil'), stage = $('veil-stage'), circle = $('veil-circle'), inner = $('veil-inner'), icon = $('veil-icon');
+  if (!veil.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) return swap();
+  if (busy) return;
+  busy = true;
+  circle.style.background = o.bg;
+  veil.style.color = o.fg;
+  icon.className = o.icon ? 'ph-duotone ' + o.icon : '';
+  $('veil-label').textContent = o.label || '';
+  const W = innerWidth, H = innerHeight, x = lastPt ? lastPt.x : W / 2, y = lastPt ? lastPt.y : H / 2;
+  const R = Math.hypot(Math.max(x, W - x), Math.max(y, H - y)) + 20;
+  Object.assign(circle.style, {left: x - R + 'px', top: y - R + 'px', width: 2 * R + 'px', height: 2 * R + 'px'});
+  const ease = 'cubic-bezier(.75,0,.25,1)', soft = 'cubic-bezier(.2,.7,.2,1)';
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+
+  // 1. grow the circle from the button
+  veil.style.visibility = 'visible';
+  veil.style.pointerEvents = 'auto';
+  const grow = circle.animate([{transform: 'scale(0)'}, {transform: 'scale(1)'}],
+                              {duration: 620, easing: ease, fill: 'backwards'});
+  const shown = o.label ? inner.animate(
+    [{opacity: 0, transform: 'translateY(22px) scale(.94)'}, {opacity: 1, transform: 'none'}],
+    {duration: 480, delay: 300, easing: soft, fill: 'both'}) : null;
+  const spin = o.spin ? icon.animate(
+    [{transform: 'rotate(-25deg) scale(.6)'}, {transform: 'rotate(8deg) scale(1.1)'}, {transform: 'none'}],
+    {duration: 700, delay: 320, easing: soft, fill: 'backwards'}) : null;
+  await grow.finished;
+
+  // 2. swap the screen under the veil and hold
+  swap();
+  await wait(o.label ? 520 : 40);
+  if (shown) await shown.finished;
+
+  // 3. wipe the veil up
+  const timing = {duration: 560, easing: ease, fill: 'forwards'};
+  const out = veil.animate([{transform: 'none'}, {transform: 'translateY(-100%)'}], timing);
+  const hold = stage.animate([{transform: 'none'}, {transform: 'translateY(100%)'}], timing);
+  const lift = o.label ? inner.animate([{opacity: 1, transform: 'none'}, {opacity: 0, transform: 'translateY(-40px)'}],
+                                       {duration: 360, easing: 'ease-in', fill: 'forwards'}) : null;
+  await out.finished;
+  veil.style.visibility = 'hidden';
+  veil.style.pointerEvents = 'none';
+  [out, hold, lift, shown, spin].forEach(a => a && a.cancel());
+  busy = false;
+}
+
+const GREEN = {bg: '#2e4a3a', fg: '#f5ede0'}, TERRA = {bg: '#c3512d', fg: '#fff7ef'}, PANEL = {bg: '#ebe4d2', fg: '#2a2925'};
+
+// error banner of the current screen, the shake plays again every time
+function shake(el, message) {
+  el.querySelector('span').textContent = message;
+  el.hidden = false;
+  el.style.animation = 'none';
+  void el.offsetWidth;
+  el.style.animation = '';
+}
+function fail(message) { shake(document.querySelector('#' + phase + ' .err'), message); }
+
+// ---------- intro, log in, create account ----------
+$('to-login').onclick = () => transit({...GREEN, icon: 'ph-sign-in', label: 'Log in'}, () => go('login'));
+$('to-signup').onclick = () => transit({...GREEN, icon: 'ph-user-plus', label: 'New account'}, () => go('signup'));
+$('to-newchain').onclick = () => transit({...GREEN, icon: 'ph-buildings', label: 'New chain'}, () => go('newchain'));
+document.querySelectorAll('.back').forEach(b => {
+  b.onclick = () => transit(PANEL, () => go(user && (phase === 'newchain' || phase === 'unlock') ? 'chains' : 'intro'));
+});
+
+function welcome(d) {
+  transit({...GREEN, icon: 'ph-lock-key-open', label: 'Welcome, ' + d.user, spin: true}, () => {
+    user = d.user;
+    go('chains');
+    toast(d.message);
+  });
+}
+
+for (const [screen, path] of [['login', 'login'], ['signup', 'signup']]) {
+  document.querySelector('#' + screen + ' form').onsubmit = async e => {
+    e.preventDefault();
+    if (busy) return;
+    const d = await api(path, Object.fromEntries(new FormData(e.target)));
+    if (d.ok) welcome(d);
+    else fail(d.error);
+  };
+}
+
+$('logout').onclick = async () => {
+  if (busy) return;
+  await api('logout');
+  transit({...TERRA, icon: 'ph-lock-key', label: 'Logged out', spin: true}, () => {
+    user = hotel = meta = null;
+    $('toast').hidden = true;
+    go('intro');
+  });
+};
+
+// ---------- my chains ----------
+async function loadChains() {
+  const d = await api('chains');
+  if (!d.ok) return fail(d.error);
+  $('chain-count').textContent = `${d.chains.length} chain(s)`;
+  $('chains-folder').textContent = `data/chains/${user}/`;
+  const grid = $('chain-list');
+  grid.querySelectorAll('.chain-card').forEach(n => n.remove());
+  for (const c of d.chains) {
+    const card = el('div', 'chain-card');
+    const open = el('button', 'site');
+    const top = el('span', 'site-top');
+    top.append(icon('ph-buildings'));
+    if (c.protected) {
+      const lock = icon('ph-lock-key lock');
+      lock.title = 'Has a file password';
+      top.append(lock);
+    }
+    open.append(top, el('span', 'site-city', c.name), el('span', 'site-count', `${c.locations} loc. · ${c.bookings} bookings`));
+    open.title = c.name;
+    open.onclick = async () => {
+      const r = await api('open_chain', {file: c.file});
+      if (r.ok) enterChain(r);
+      else fail(r.error);
+    };
+    const del = el('button', 'trash');
+    del.title = 'Delete chain';
+    del.setAttribute('aria-label', 'Delete chain ' + c.name);
+    del.append(icon('ph-trash'));
+    del.onclick = () => ask(`Delete the chain ${c.name}? Its file is removed from your account.`, async () => {
+      const r = await api('delete_chain', {file: c.file});
+      toast(r.error || r.message, !r.ok);
+      loadChains();
+    });
+    card.append(open, del);
+    grid.insertBefore(card, $('to-newchain'));
+  }
+}
+
+document.querySelector('#newchain form').onsubmit = async e => {
+  e.preventDefault();
+  if (busy) return;
+  const d = await api('new_chain', Object.fromEntries(new FormData(e.target)));
+  if (d.ok) enterChain(d);
+  else fail(d.error);
+};
+
+// ---------- open a file (intro or my chains) ----------
+const TOO_BIG = 'The file is too big (max 1 MB).';
+async function pickFile() {
+  document.querySelectorAll('.err').forEach(el => { el.hidden = true; });
+  if (window.showOpenFilePicker) {
+    try {
+      const [handle] = await showOpenFilePicker({types: [{description: 'Hotel chain file', accept: {'text/plain': ['.txt', '.csv']}}]});
+      return openFile(await handle.getFile(), handle);
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+    }
+  }
+  $('file-input').click();
+}
+document.querySelectorAll('.pick-file').forEach(b => { b.onclick = pickFile; });
+$('file-input').onchange = e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (file) openFile(file, null);
+};
+
+async function openFile(file, handle) {
+  const name = file.name;
+  if (!/\.(txt|csv)$/i.test(name))
+    return fail(`"${name}" is not a .txt file. Choose a hotel chain file saved from this app or a bookings .txt file.`);
+  if (file.size > 1e6) return fail(TOO_BIG);
+  const d = await api('open', {filename: name, text: await file.text()});
+  if (!d.ok) return fail(d.error);
+  // a guest saves back to the same file, an account keeps its own copy
+  fileHandle = user ? null : handle;
+  savedAs = fileHandle ? fileHandle.name : '';
+  if (d.needs !== 'password') return enterChain(d);
+  transit({...TERRA, icon: 'ph-lock-key', label: d.name, spin: true}, () => {
+    go('unlock');
+    $('unlock-file').textContent = name;
+    $('unlock-title').textContent = d.name;
+    $('unlock-info').textContent = `${d.locations} location(s), ${d.bookings} booking(s).`;
+  });
+}
+
+document.querySelector('#unlock form').onsubmit = async e => {
+  e.preventDefault();
+  if (busy) return;
+  const d = await api('unlock', Object.fromEntries(new FormData(e.target)));
+  if (d.ok) enterChain(d);
+  else fail(d.error);
+};
+
+function enterChain(d) {
+  if (!user) dirty = false;
+  if (d.chain && !d.chain.guest) { fileHandle = null; savedAs = ''; }
+  transit({...GREEN, icon: 'ph-buildings', label: d.state.name}, () => {
+    hotel = d.state;
+    meta = d.chain;
+    selected = hotel.sites.length ? hotel.sites[0].city : null;
+    results = null;
+    go('app');
+    toast(d.message);
+  });
+}
+
+// ---------- app ----------
+function toast(message, isError) {
+  const el = $('toast');
+  $('toast-text').textContent = message;
+  $('toast-icon').className = 'ph-duotone ' + (isError ? 'ph-warning-circle' : 'ph-check-circle');
+  el.classList.toggle('bad', !!isError);
+  el.hidden = false;
+  el.style.animation = 'none';
+  void el.offsetWidth;
+  el.style.animation = '';
+}
+$('toast-close').onclick = () => { $('toast').hidden = true; };
+
+function ask(text, yes, label) {
+  onYes = yes;
+  $('dialog-text').textContent = text;
+  $('dialog-yes').textContent = label || 'Delete';
+  $('dialog').hidden = false;
+  $('dialog-no').focus();
+}
+function closeDialog() { $('dialog').hidden = true; onYes = null; }
+$('dialog-no').onclick = closeDialog;
+$('dialog-yes').onclick = () => { const yes = onYes; closeDialog(); if (yes) yes(); };
+$('dialog').onclick = e => { if (e.target === $('dialog')) closeDialog(); };
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!$('dialog').hidden) closeDialog();
+  if (!$('pw-dialog').hidden) $('pw-dialog').hidden = true;
+});
+
+// runs an app action, shows its message and redraws. returns true if it worked
+async function act(path, body, clearResults) {
+  const d = await api(path, body);
+  if (!d.ok && 'chain' in d && !d.chain) {   // the server was restarted, the chain is not open anymore
+    hotel = meta = null;
+    user = d.user;
+    go(user ? 'chains' : 'intro');
+    fail(d.error);
+    return false;
+  }
+  toast(d.error || d.message, !d.ok);
+  if (d.state) hotel = d.state;
+  if (d.chain) meta = d.chain;
+  if (d.ok && meta && meta.guest) dirty = true;
+  if (d.ok && clearResults) results = null;
+  render();
+  return d.ok;
+}
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+function icon(name) { return el('i', 'ph-duotone ' + name); }
+
+function render() {
+  if (!hotel || !meta) return;
+  const sites = hotel.sites;
+  if (!sites.some(s => s.city === selected)) selected = null;
+  const customers = sites.reduce((n, s) => n + s.clients.length, 0);
+  $('chain-name').textContent = hotel.name;
+  $('totals').textContent = `${sites.length} locations · ${customers} customers` +
+    (meta.guest ? '' : ' · saved automatically') + (meta.protected ? ' · file password on' : '');
+  $('who-icon').className = 'ph-duotone ' + (meta.guest ? 'ph-file-text' : 'ph-user');
+  $('who').replaceChildren(...(meta.guest ? ['Guest · ', el('b', '', meta.filename)] : ['Signed in as ', el('b', '', user)]));
+  $('save-icon').className = 'ph-duotone ' + (meta.guest ? 'ph-floppy-disk' : 'ph-download-simple');
+  $('save-label').textContent = meta.guest ? (savedAs ? 'Save to ' + savedAs : 'Save') : 'Download .txt';
+  $('leave-icon').className = 'ph-duotone ' + (meta.guest ? 'ph-sign-out' : 'ph-squares-four');
+  $('leave-label').textContent = meta.guest ? 'Close' : 'My chains';
+
+  // location cards go before the "New location" card, which stays so its input keeps the text
+  const grid = $('sites');
+  grid.querySelectorAll('.site').forEach(n => n.remove());
+  for (const s of sites) {
+    const card = el('button', 'site' + (s.city === selected ? ' sel' : ''));
+    const top = el('span', 'site-top');
+    const n = s.clients.length;
+    top.append(icon('ph-map-pin'), el('span', 'site-count', `${n} ${n === 1 ? 'customer' : 'customers'}`));
+    card.append(top, el('span', 'site-city', s.city));
+    card.title = s.city;
+    card.onclick = () => { selected = s.city; render(); };
+    grid.insertBefore(card, $('new-site'));
+  }
+
   const site = sites.find(s => s.city === selected);
   $('clients-title').textContent = site ? 'Customers at ' + site.city : 'Customers (select a location)';
-  $('clients').replaceChildren();
+  $('delete-site').hidden = !site;
+  $('no-selection').hidden = !!site;
+  $('no-clients').hidden = !site || site.clients.length > 0;
+  const body = $('clients');
+  body.replaceChildren();
   for (const c of site ? site.clients : []) {
-    const row = $('clients').insertRow();
-    [c.last_name, c.first_name, c.age, c.room].forEach(v => cell(row, v));
-    const del = document.createElement('button');
-    del.className = 'danger';
-    del.textContent = 'Delete';
+    const row = body.insertRow();
+    row.append(el('td', '', c.last_name), el('td', '', c.first_name), el('td', 'num', c.age), el('td', 'num', c.room));
+    const del = el('button', 'trash');
+    del.title = 'Delete booking';
+    del.setAttribute('aria-label', 'Delete booking');
+    del.append(icon('ph-trash'));
     del.onclick = () => act('delete_client', {city: site.city, last_name: c.last_name, first_name: c.first_name}, true);
-    row.insertCell().append(del);
+    const cell = el('td', 'del');
+    cell.append(del);
+    row.append(cell);
   }
+
+  $('results-box').hidden = !results || !results.length;
+  $('no-match').hidden = !results || results.length > 0;
+  $('results').replaceChildren(...(results || []).map(r => {
+    const item = el('div', 'result');
+    const text = el('div', 'result-text');
+    text.append(el('span', 'result-name', `${r.last_name} ${r.first_name}`), el('span', 'result-meta', `age ${r.age} · room ${r.room}`));
+    const chip = el('span', 'city-chip');
+    chip.append(icon('ph-map-pin'), r.city);
+    item.append(icon('ph-user'), text, chip);
+    return item;
+  }));
 }
 
-async function addSite() {
-  const city = val('city').trim();
-  if (await act('add_site', {city})) { selected = city; render(chain); $('city').value = ''; }
-}
+$('site-form').onsubmit = async e => {
+  e.preventDefault();
+  const city = $('city').value.trim();
+  if (await act('add_site', {city})) {
+    selected = city;
+    $('city').value = '';
+    render();
+  }
+};
 
-async function deleteSite() {
-  if (!selected) return say('Select a location first.', true);
-  if (confirm(`Delete ${selected} and all its bookings?`)) act('delete_site', {city: selected}, true);
-}
+$('delete-site').onclick = () => {
+  if (!selected) return toast('Select a location first.', true);
+  const city = selected;
+  ask(`Delete ${city} and all its bookings?`, () => act('delete_site', {city}, true));
+};
 
-async function addClient() {
-  if (!selected) return say('Select a location first.', true);
+$('client-form').onsubmit = async e => {
+  e.preventDefault();
+  if (!selected) return toast('Select a location first.', true);
   const ids = ['last_name', 'first_name', 'age', 'room'];
   const body = {city: selected};
-  ids.forEach(id => body[id] = val(id));
-  if (await act('add_client', body)) ids.forEach(id => $(id).value = '');
-}
+  ids.forEach(id => { body[id] = $(id).value; });
+  if (await act('add_client', body)) ids.forEach(id => { $(id).value = ''; });
+};
 
-async function search() {
-  const data = await call('search', {prefix: val('prefix')});
-  $('results').replaceChildren();
-  for (const r of data.results || []) {
-    const row = $('results').insertRow();
-    [r.last_name, r.first_name, r.age, r.room, r.city].forEach(v => cell(row, v));
+$('search-form').onsubmit = async e => {
+  e.preventDefault();
+  const d = await api('search', {prefix: $('prefix').value});
+  toast(d.error || d.message, !d.ok);
+  results = d.ok ? d.results : null;
+  render();
+};
+$('clear-results').onclick = () => { results = null; $('prefix').value = ''; render(); };
+
+$('load-sample').onclick = () => act('load_file');
+
+// file password dialog
+$('file-password').onclick = () => {
+  const form = document.querySelector('#pw-dialog form');
+  form.reset();
+  form.querySelector('.err').hidden = true;
+  $('pw-dialog').hidden = false;
+  form.querySelector('input').focus();
+};
+$('pw-no').onclick = () => { $('pw-dialog').hidden = true; };
+$('pw-dialog').onclick = e => { if (e.target === $('pw-dialog')) $('pw-dialog').hidden = true; };
+document.querySelector('#pw-dialog form').onsubmit = async e => {
+  e.preventDefault();
+  const d = await api('set_file_password', Object.fromEntries(new FormData(e.target)));
+  if (!d.ok) return shake(e.target.querySelector('.err'), d.error);
+  $('pw-dialog').hidden = true;
+  if (d.chain) meta = d.chain;
+  if (meta && meta.guest) dirty = true;
+  toast(d.message);
+  render();
+};
+
+// guest: save back to the opened file (or pick one / download). account: download a copy
+$('save').onclick = async () => {
+  const d = await api('save');
+  if (!d.ok) return toast(d.error, true);
+  try {
+    if (meta.guest && !fileHandle && window.showSaveFilePicker)
+      fileHandle = await showSaveFilePicker({suggestedName: d.filename, types: [{description: 'Hotel chain file', accept: {'text/plain': ['.txt']}}]});
+    if (meta.guest && fileHandle) {
+      const writer = await fileHandle.createWritable();
+      await writer.write(d.text);
+      await writer.close();
+      savedAs = fileHandle.name;
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') return;
+    fileHandle = null;
   }
-}
+  if (!meta.guest || !fileHandle) {
+    const url = URL.createObjectURL(new Blob([d.text], {type: 'text/plain'}));
+    const link = el('a');
+    link.href = url;
+    link.download = d.filename;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    if (meta.guest) savedAs = d.filename;
+  }
+  dirty = false;
+  toast(meta.guest ? d.message : `Downloaded ${d.filename}.`);
+  render();
+};
 
-// creating a new chain deletes the old one, so ask first
-function createChain() {
-  if (chain && !confirm('This deletes the current chain and all its bookings. Continue?')) return;
-  act('create', {name: val('chain')}, true);
-}
+$('leave').onclick = () => {
+  if (busy) return;
+  const leave = async () => {
+    await api('close');
+    const guest = meta.guest;
+    const o = guest ? {...TERRA, icon: 'ph-lock-key', label: 'Closed', spin: true} : {...PANEL, icon: 'ph-squares-four', label: 'My chains'};
+    transit(o, () => {
+      hotel = meta = selected = results = fileHandle = null;
+      savedAs = '';
+      dirty = false;
+      $('toast').hidden = true;
+      go(user ? 'chains' : 'intro');
+    });
+  };
+  if (meta.guest && dirty) ask('Close this chain? The changes you did not save will be lost.', leave, 'Close');
+  else leave();
+};
 
-fetch('/api/state').then(r => r.json()).then(d => render(d.state));
+// after a page reload we come back to where the server is
+fetch('/api/state').then(r => r.json()).then(d => {
+  user = d.user;
+  if (d.state && d.chain) {
+    hotel = d.state;
+    meta = d.chain;
+    selected = hotel.sites.length ? hotel.sites[0].city : null;
+    go('app');
+  } else {
+    go(user ? 'chains' : 'intro');
+  }
+}).catch(() => go('intro'));
 </script>
 </body>
 </html>

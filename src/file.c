@@ -12,6 +12,21 @@ static int file_parseLine(const char *line, char *last_name, char *first_name,
                   last_name, first_name, age, num_room, city) == 5;
 }
 
+/* finds the site for city, or creates it if its not there yet. NULL if malloc failed */
+static T_Site *file_getSite(T_Hotel *hotel, const char *city)
+{
+    T_Site *site = findSite(hotel, (char *)city);
+    if (site)
+        return site;
+    site = createSite((char *)city);
+    if (!site || !addSite(hotel, site)) {
+        free(site ? site->city : NULL);
+        free(site);
+        return NULL;
+    }
+    return site;
+}
+
 void processingfile(T_Hotel *hotel)
 {
     loadBookings(hotel, BOOKINGS_FILE);
@@ -32,17 +47,29 @@ void loadBookings(T_Hotel *hotel, const char *filename)
         return;
     }
 
-    char line[256];
+    char line[512];   /* the #HOTEL line can be ~220 chars with the hash */
     char last_name[MAX_NAME], first_name[MAX_NAME], city[MAX_NAME];
     int  age, num_room;
     int  added = 0, skipped = 0, lineNumber = 0;
 
     while (fgets(line, sizeof line, file)) {
         lineNumber++;
-        if (lineNumber == 1 && strncmp(line, "LastName;", 9) == 0)
+        if (strncmp(line, "LastName;", 9) == 0)
             continue;
         if (line[0] == '\n' || line[0] == '\r')
             continue;
+
+        /* lines starting with # are not bookings.
+           #SITE;city makes an (maybe empty) location, #HOTEL is read by python, others are ignored */
+        if (line[0] == '#') {
+            if (strncmp(line, "#SITE;", 6) == 0) {
+                if (sscanf(line, "#SITE;%49[^\r\n]", city) != 1 || !file_getSite(hotel, city)) {
+                    printf("Line %d skipped: bad #SITE line.\n", lineNumber);
+                    skipped++;
+                }
+            }
+            continue;
+        }
 
         if (!file_parseLine(line, last_name, first_name, &age, &num_room, city)) {
             printf("Line %d skipped: wrong format.\n", lineNumber);
@@ -50,16 +77,11 @@ void loadBookings(T_Hotel *hotel, const char *filename)
             continue;
         }
 
-        T_Site *site = findSite(hotel, city);
+        T_Site *site = file_getSite(hotel, city);
         if (!site) {
-            site = createSite(city);
-            if (!site || !addSite(hotel, site)) {
-                free(site ? site->city : NULL);
-                free(site);
-                printf("Line %d skipped: cannot create location %s.\n", lineNumber, city);
-                skipped++;
-                continue;
-            }
+            printf("Line %d skipped: cannot create location %s.\n", lineNumber, city);
+            skipped++;
+            continue;
         }
 
         T_Client *client = createClient(last_name, first_name, age, num_room);
@@ -82,8 +104,20 @@ void loadBookings(T_Hotel *hotel, const char *filename)
     printf("%d bookings added, %d lines skipped.\n", added, skipped);
 }
 
+/* writes the header + all bookings, same for both save functions. returns how many bookings */
+static int file_writeBookings(FILE *file, T_Hotel *hotel)
+{
+    int written = 0;
+    fprintf(file, "LastName;FirstName;Age;Room Number;City\n");
+    for (T_Site *site = hotel->first; site; site = site->next)
+        for (T_Client *client = site->first; client; client = client->next, written++)
+            fprintf(file, "%s;%s;%d;%d;%s\n", client->last_name, client->first_name,
+                    client->age, client->num_room, site->city);
+    return written;
+}
+
 /* saves all bookings in the same format as bookings.txt so loadBookings can read it again.
- * NOTE: chain name and empty locations are not saved (didnt need it for now)
+ * NOTE: chain name and empty locations are not saved here, use saveChainFile for that
  * returns how many bookings were written, or -1 if something went wrong */
 int saveHotel(T_Hotel *hotel, const char *filename)
 {
@@ -94,14 +128,31 @@ int saveHotel(T_Hotel *hotel, const char *filename)
     if (!file)
         return -1;
 
-    int written = 0;
-    fprintf(file, "LastName;FirstName;Age;Room Number;City\n");
-    for (T_Site *site = hotel->first; site; site = site->next)
-        for (T_Client *client = site->first; client; client = client->next, written++)
-            fprintf(file, "%s;%s;%d;%d;%s\n", client->last_name, client->first_name,
-                    client->age, client->num_room, site->city);
+    int written = file_writeBookings(file, hotel);
 
     /* fclose can fail too (if the data didnt get written fully) so check it */
+    if (fclose(file) != 0)
+        return -1;
+    return written;
+}
+
+/* same as saveHotel but for the web app: first a #HOTEL;name;hash line,
+ * then #SITE;city for every site (so empty ones are kept too), then the bookings.
+ * hash is the file password hash made in python, "" if the file has no password */
+int saveChainFile(T_Hotel *hotel, const char *filename, const char *passHash)
+{
+    if (!hotel || !filename || !passHash)
+        return -1;
+
+    FILE *file = fopen(filename, "w");
+    if (!file)
+        return -1;
+
+    fprintf(file, "#HOTEL;%s;%s\n", hotel->name, passHash);
+    for (T_Site *site = hotel->first; site; site = site->next)
+        fprintf(file, "#SITE;%s\n", site->city);
+    int written = file_writeBookings(file, hotel);
+
     if (fclose(file) != 0)
         return -1;
     return written;
