@@ -21,7 +21,7 @@ void test_hotel(void)
     displaySite(hotel->first);                        /* empty site */
     displaySite(NULL);
 
-    freeHotel(hotel);                                 /* frees sites and clients: checked by make debug */
+    freeHotel(hotel);                                 /* make debug will tell us if something leaks */
     freeHotel(NULL);
     printf("test_hotel passed.\n");
 }

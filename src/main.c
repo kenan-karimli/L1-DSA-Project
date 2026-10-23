@@ -6,12 +6,10 @@
 #include "search.h"
 #include "file.h"
 
-/*
- * DO NOT DELETE: the program's only main() lives here.
- * Never write main() in any other src/ file: the build would fail with "multiple definition of main".
- */
+/* main() is ONLY here. dont put a main() in other files in src/,
+   it wont compile ("multiple definition of main") */
 
-/* Reads one line into buf without the newline. Returns 0 on end of input. */
+/* reads a line into buf and removes the \n. returns 0 on EOF (ctrl+D) */
 static int main_readLine(const char *prompt, char *buf, int size)
 {
     printf("%s", prompt);
@@ -23,14 +21,14 @@ static int main_readLine(const char *prompt, char *buf, int size)
     if (newline) {
         *newline = '\0';
     } else {
-        int c;  /* line was longer than buf: drop the rest */
+        int c;  /* line too long, throw away the rest */
         while ((c = getchar()) != '\n' && c != EOF)
             ;
     }
     return 1;
 }
 
-/* Asks until the user types a non-empty line. Returns 0 on end of input. */
+/* keeps asking until the user types something (not empty) */
 static int main_readText(const char *prompt, char *buf, int size)
 {
     while (main_readLine(prompt, buf, size)) {
@@ -41,7 +39,8 @@ static int main_readText(const char *prompt, char *buf, int size)
     return 0;
 }
 
-/* Asks until the user types a whole number in [min, max]. Returns 0 on end of input. */
+/* keeps asking until we get a number between min and max.
+   the %c is there so stuff like "12abc" is refused */
 static int main_readInt(const char *prompt, int min, int max, int *value)
 {
     char buf[32];
@@ -197,6 +196,19 @@ static void main_printMenu(T_Hotel *hotel)
     printf(" 8. Search for a customer by last name\n");
     printf(" 9. Quit\n");
     printf("10. Load bookings from %s\n", BOOKINGS_FILE);
+    printf("11. Save the chain to %s\n", SAVE_FILE);
+    printf("12. Load the saved chain from %s\n", SAVE_FILE);
+}
+
+static void main_saveHotel(T_Hotel *hotel)
+{
+    if (!main_needHotel(hotel))
+        return;
+    int written = saveHotel(hotel, SAVE_FILE);
+    if (written < 0)
+        printf("Cannot write %s.\n", SAVE_FILE);
+    else
+        printf("%d bookings saved to %s.\n", written, SAVE_FILE);
 }
 
 int main(void)
@@ -206,7 +218,7 @@ int main(void)
 
     do {
         main_printMenu(hotel);
-        if (!main_readInt("Your choice: ", 1, 10, &choice))
+        if (!main_readInt("Your choice: ", 1, 12, &choice))
             break;
 
         switch (choice) {
@@ -219,6 +231,8 @@ int main(void)
         case 7:  main_deleteSite(hotel);     break;
         case 8:  main_searchClients(hotel);  break;
         case 10: if (main_needHotel(hotel)) processingfile(hotel); break;
+        case 11: main_saveHotel(hotel);      break;
+        case 12: if (main_needHotel(hotel)) loadBookings(hotel, SAVE_FILE); break;
         }
     } while (choice != 9);
 

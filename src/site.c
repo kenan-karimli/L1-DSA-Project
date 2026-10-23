@@ -21,8 +21,8 @@ T_Site *createSite(char *city)
     return newSite;
 }
 
-/* Sorted insert by city name; the same city cannot be added twice.
- * On failure the caller still owns the site and must free it. */
+/* sorted insert by city name, same city twice is refused.
+ * if it returns 0 you have to free the site yourself */
 int addSite(T_Hotel *hotel, T_Site *site)
 {
     if (!hotel || !site)

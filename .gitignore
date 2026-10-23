@@ -68,3 +68,6 @@ $RECYCLE.BIN/
 
 # --- Generated submission files (make submit) ---
 submit/
+
+# --- Saved chain (menu option 11, web Save button) ---
+data/saved_chain.txt

@@ -31,7 +31,7 @@ void test_site(void)
 
     addClient(paris, createClient("Martin", "Alain", 42, 112));
     addClient(paris, createClient("Dupond", "Charles", 28, 125));
-    assert(deleteSite(hotel, "Paris"));               /* middle, with clients: freed (checked by make debug) */
+    assert(deleteSite(hotel, "Paris"));               /* middle + has clients (make debug checks the frees) */
     assert(deleteSite(hotel, "Bordeaux"));            /* head */
     assert(deleteSite(hotel, "Toulouse"));            /* tail */
     assert(!deleteSite(hotel, "Paris"));

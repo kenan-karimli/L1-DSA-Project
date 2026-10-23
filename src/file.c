@@ -2,25 +2,33 @@
 #include "client.h"
 #include "site.h"
 
-/* One line: LastName;FirstName;Age;Room Number;City. Returns 1 if all 5 fields were read. */
+/* a line looks like: LastName;FirstName;Age;Room Number;City
+   returns 1 if we got all 5 fields */
 static int file_parseLine(const char *line, char *last_name, char *first_name,
                           int *age, int *num_room, char *city)
 {
-    /* widths are MAX_NAME - 1 */
+    /* 49 = MAX_NAME - 1 (need space for the \0) */
     return sscanf(line, " %49[^;];%49[^;];%d;%d;%49[^\r\n]",
                   last_name, first_name, age, num_room, city) == 5;
 }
 
 void processingfile(T_Hotel *hotel)
 {
+    loadBookings(hotel, BOOKINGS_FILE);
+}
+
+/* reads the file and adds every booking to the hotel.
+   bad lines are skipped and we print which line it was */
+void loadBookings(T_Hotel *hotel, const char *filename)
+{
     if (!hotel) {
         printf("Create a hotel chain first.\n");
         return;
     }
 
-    FILE *file = fopen(BOOKINGS_FILE, "r");
+    FILE *file = fopen(filename, "r");
     if (!file) {
-        printf("Cannot open %s.\n", BOOKINGS_FILE);
+        printf("Cannot open %s.\n", filename);
         return;
     }
 
@@ -72,4 +80,29 @@ void processingfile(T_Hotel *hotel)
 
     fclose(file);
     printf("%d bookings added, %d lines skipped.\n", added, skipped);
+}
+
+/* saves all bookings in the same format as bookings.txt so loadBookings can read it again.
+ * NOTE: chain name and empty locations are not saved (didnt need it for now)
+ * returns how many bookings were written, or -1 if something went wrong */
+int saveHotel(T_Hotel *hotel, const char *filename)
+{
+    if (!hotel || !filename)
+        return -1;
+
+    FILE *file = fopen(filename, "w");
+    if (!file)
+        return -1;
+
+    int written = 0;
+    fprintf(file, "LastName;FirstName;Age;Room Number;City\n");
+    for (T_Site *site = hotel->first; site; site = site->next)
+        for (T_Client *client = site->first; client; client = client->next, written++)
+            fprintf(file, "%s;%s;%d;%d;%s\n", client->last_name, client->first_name,
+                    client->age, client->num_room, site->city);
+
+    /* fclose can fail too (if the data didnt get written fully) so check it */
+    if (fclose(file) != 0)
+        return -1;
+    return written;
 }

@@ -10,7 +10,7 @@ char *copyString(const char *s)
     return copy;
 }
 
-/* < 0 if (last1, first1) comes before (last2, first2), 0 if equal, > 0 after */
+/* like strcmp but for full names: last name first, then first name */
 int compareNames(const char *last1, const char *first1, const char *last2, const char *first2)
 {
     int cmp = strcmp(last1, last2);
@@ -42,9 +42,9 @@ T_Client *createClient(char *last_name, char *first_name, int age, int num_room)
     return newClient;
 }
 
-/* Sorted insert by last name, then first name. A client with the same last and
- * first name is rejected, so deleteClient always knows which one to remove.
- * On failure the caller still owns the client and must free it. */
+/* inserts the client so the list stays sorted (last name, then first name).
+ * same full name twice is not allowed, otherwise deleteClient wouldnt know which one to delete.
+ * returns 0 if it fails -> then you have to free the client yourself */
 int addClient(T_Site *site, T_Client *client)
 {
     if (!site || !client)

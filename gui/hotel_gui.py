@@ -1,16 +1,13 @@
-"""Tkinter GUI for the hotel chain project.
-
-It does not reimplement anything: every operation calls the C functions from
-build/libhotel.so (built with `make lib`) through ctypes, and the tables are
-filled by walking the same C linked lists.
-
-Run from the repository root:  make gui PYTHON=<a python that has tkinter>
-"""
+# tkinter GUI for our hotel project
+# all the real work is done by our C functions (libhotel.so), python just calls them
+# with ctypes and shows the linked lists in tables
+#
+# run with: make gui PYTHON=<python with tkinter>
 
 import ctypes
 import os
 import sys
-from ctypes import POINTER, Structure, c_char_p, c_int, c_void_p
+from ctypes import c_void_p
 
 try:
     import tkinter as tk
@@ -18,86 +15,7 @@ try:
 except ImportError:
     sys.exit("This Python has no tkinter. Run: make gui PYTHON=<python with tkinter>")
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LIB_PATH = os.path.join(ROOT, "build", "libhotel.so")
-
-
-# Mirrors of the structs in include/tp3.h (same field order and types)
-class Client(Structure):
-    pass
-
-
-Client._fields_ = [
-    ("last_name", c_char_p),
-    ("first_name", c_char_p),
-    ("age", c_int),
-    ("num_room", c_int),
-    ("next", POINTER(Client)),
-]
-
-
-class Site(Structure):
-    pass
-
-
-Site._fields_ = [
-    ("city", c_char_p),
-    ("number_clients", c_int),
-    ("first", POINTER(Client)),
-    ("next", POINTER(Site)),
-]
-
-
-class Hotel(Structure):
-    _fields_ = [("name", c_char_p), ("first", POINTER(Site))]
-
-
-class Result(Structure):
-    pass
-
-
-Result._fields_ = [
-    ("client", POINTER(Client)),
-    ("city", c_char_p),
-    ("next", POINTER(Result)),
-]
-
-
-def load_library():
-    if not os.path.exists(LIB_PATH):
-        sys.exit(f"{LIB_PATH} not found. Build it first with: make lib")
-    lib = ctypes.CDLL(LIB_PATH)
-    signatures = {
-        "createHotel": ([c_char_p], POINTER(Hotel)),
-        "createSite": ([c_char_p], POINTER(Site)),
-        "createClient": ([c_char_p, c_char_p, c_int, c_int], POINTER(Client)),
-        "addSite": ([POINTER(Hotel), POINTER(Site)], c_int),
-        "addClient": ([POINTER(Site), POINTER(Client)], c_int),
-        "deleteSite": ([POINTER(Hotel), c_char_p], c_int),
-        "deleteClient": ([POINTER(Site), c_char_p, c_char_p], c_int),
-        "findSite": ([POINTER(Hotel), c_char_p], POINTER(Site)),
-        "findClients": ([POINTER(Hotel), c_char_p], POINTER(Result)),
-        "freeResults": ([POINTER(Result)], None),
-        "freeClients": ([POINTER(Client)], None),
-        "freeHotel": ([POINTER(Hotel)], None),
-        "processingfile": ([POINTER(Hotel)], None),
-    }
-    for name, (args, res) in signatures.items():
-        func = getattr(lib, name)
-        func.argtypes = args
-        func.restype = res
-    return lib
-
-
-def text(raw):
-    return raw.decode("utf-8", errors="replace") if raw else ""
-
-
-def walk(node):
-    """Yields each struct of a C linked list, starting from a pointer."""
-    while node:
-        yield node.contents
-        node = node.contents.next
+from hotel_lib import ROOT, SAVE_FILE, load_library, text, walk
 
 
 class HotelApp(tk.Tk):
@@ -115,7 +33,7 @@ class HotelApp(tk.Tk):
         self.build_ui()
         self.refresh()
 
-    # ---------- layout ----------
+    # building the window
     def build_ui(self):
         pad = {"padx": 6, "pady": 4}
 
@@ -123,6 +41,8 @@ class HotelApp(tk.Tk):
         top.pack(fill="x", **pad)
         self.chain_label = ttk.Label(top, text="No hotel chain", font=("TkDefaultFont", 12, "bold"))
         self.chain_label.pack(side="left")
+        ttk.Button(top, text="Load saved", command=self.on_load_saved).pack(side="right")
+        ttk.Button(top, text="Save", command=self.on_save).pack(side="right", padx=4)
         ttk.Button(top, text="Load bookings file", command=self.on_load_file).pack(side="right")
         ttk.Button(top, text="Create chain", command=self.on_create_chain).pack(side="right", padx=4)
         self.chain_entry = ttk.Entry(top, width=24)
@@ -144,7 +64,7 @@ class HotelApp(tk.Tk):
         ttk.Button(row, text="Add location", command=self.on_add_site).pack(side="left", padx=4)
         ttk.Button(left, text="Delete selected location", command=self.on_delete_site).pack(fill="x", **pad)
 
-        # customers of the selected location
+        # customers of the location you clicked on
         right = ttk.LabelFrame(middle, text="Customers")
         right.pack(side="left", fill="both", expand=True)
         self.clients_frame = right
@@ -160,7 +80,7 @@ class HotelApp(tk.Tk):
         ttk.Button(form, text="Add booking", command=self.on_add_client).grid(row=1, column=4, padx=4)
         ttk.Button(right, text="Delete selected booking", command=self.on_delete_client).pack(fill="x", **pad)
 
-        # search across all locations
+        # search (in all locations)
         bottom = ttk.LabelFrame(self, text="Search customers by last name (all locations)")
         bottom.pack(fill="both", expand=True, **pad)
         row = ttk.Frame(bottom)
@@ -190,7 +110,6 @@ class HotelApp(tk.Tk):
         scroll.pack(side="right", fill="y")
         return tree
 
-    # ---------- helpers ----------
     def say(self, message):
         self.status.config(text=" " + message)
 
@@ -213,7 +132,7 @@ class HotelApp(tk.Tk):
     def total_clients(self):
         return sum(site.number_clients for site in walk(self.hotel.contents.first)) if self.hotel else 0
 
-    # ---------- refresh ----------
+    # redraw tables after every change
     def refresh(self, select_city=None):
         keep = select_city or self.selected_city()
         self.sites.delete(*self.sites.get_children())
@@ -239,7 +158,7 @@ class HotelApp(tk.Tk):
             self.clients.insert("", "end", values=(text(client.last_name), text(client.first_name),
                                                    client.age, client.num_room))
 
-    # ---------- actions ----------
+    # button handlers
     def on_create_chain(self):
         name = self.chain_entry.get().strip()
         if not name:
@@ -274,7 +193,7 @@ class HotelApp(tk.Tk):
             self.say("Out of memory.")
             return
         if not self.lib.addSite(self.hotel, site):
-            # same cleanup as the C menu does when addSite refuses a site
+            # addSite failed so we have to free it ourselves (like in main.c)
             self.libc.free(ctypes.cast(site.contents.city, c_void_p))
             self.libc.free(ctypes.cast(site, c_void_p))
             self.say(f"Location {city} could not be added.")
@@ -362,9 +281,23 @@ class HotelApp(tk.Tk):
         if not self.need_hotel():
             return
         before = self.total_clients()
-        self.lib.processingfile(self.hotel)   # its line-by-line report goes to the terminal
+        self.lib.processingfile(self.hotel)   # it prints skipped lines in the terminal, not in the gui
         self.refresh()
         self.say(f"{self.total_clients() - before} booking(s) loaded from data/bookings.txt.")
+
+    def on_save(self):
+        if not self.need_hotel():
+            return
+        written = self.lib.saveHotel(self.hotel, SAVE_FILE.encode())
+        self.say(f"Cannot write {SAVE_FILE}." if written < 0 else f"{written} booking(s) saved to {SAVE_FILE}.")
+
+    def on_load_saved(self):
+        if not self.need_hotel():
+            return
+        before = self.total_clients()
+        self.lib.loadBookings(self.hotel, SAVE_FILE.encode())
+        self.refresh()
+        self.say(f"{self.total_clients() - before} booking(s) loaded from {SAVE_FILE}.")
 
     def on_close(self):
         if self.hotel:
@@ -374,7 +307,7 @@ class HotelApp(tk.Tk):
 
 
 def main():
-    os.chdir(ROOT)   # processingfile opens data/bookings.txt relative to the repo root
+    os.chdir(ROOT)   # so data/bookings.txt is found
     HotelApp(load_library()).mainloop()
 
 

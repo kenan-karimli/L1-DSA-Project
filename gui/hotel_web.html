@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hotel Chain Manager</title>
+<style>
+  :root { --bg: #f6f7f9; --card: #fff; --line: #d9dde3; --text: #1d2330; --muted: #667085; --accent: #2f6fde; --bad: #c0392b; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #15181e; --card: #1e222a; --line: #333a46; --text: #e6e8ec; --muted: #98a2b3; --accent: #6b9bff; --bad: #ff7b6b; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, sans-serif; }
+  h1 { font-size: 20px; margin: 0; flex: 1; }
+  h2 { font-size: 15px; margin: 0 0 8px; }
+  .bar, .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .bar { margin-bottom: 12px; }
+  .grid { display: grid; grid-template-columns: minmax(220px, 1fr) 3fr; gap: 12px; }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 12px; overflow-x: auto; }
+  input { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; min-width: 0; }
+  button { padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--text); font: inherit; cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.danger { color: var(--bad); }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; }
+  tr.pick { cursor: pointer; }
+  tr.selected td { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+  .empty { color: var(--muted); }
+  #status { position: sticky; bottom: 0; padding: 8px 12px; border-radius: 6px; background: var(--card); border: 1px solid var(--line); }
+  #status.error { color: var(--bad); }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <h1 id="title">No hotel chain</h1>
+    <input id="chain" placeholder="Chain name" aria-label="Chain name">
+    <button class="primary" onclick="createChain()">Create chain</button>
+    <button onclick="act('load_file')">Load bookings file</button>
+    <button onclick="act('save')">Save</button>
+    <button onclick="act('load_saved')">Load saved</button>
+  </div>
+
+  <div class="grid">
+    <section>
+      <h2>Locations</h2>
+      <table><thead><tr><th>City</th><th>Customers</th></tr></thead><tbody id="sites"></tbody></table>
+      <div class="row">
+        <input id="city" placeholder="City" aria-label="City">
+        <button onclick="addSite()">Add location</button>
+      </div>
+      <p><button class="danger" onclick="deleteSite()">Delete selected location</button></p>
+    </section>
+
+    <section>
+      <h2 id="clients-title">Customers (select a location)</h2>
+      <table><thead><tr><th>Last name</th><th>First name</th><th>Age</th><th>Room</th><th></th></tr></thead>
+        <tbody id="clients"></tbody></table>
+      <div class="row">
+        <input id="last_name" placeholder="Last name" aria-label="Last name">
+        <input id="first_name" placeholder="First name" aria-label="First name">
+        <input id="age" type="number" min="0" max="150" placeholder="Age" aria-label="Age" style="width:80px">
+        <input id="room" type="number" min="1" placeholder="Room" aria-label="Room" style="width:90px">
+        <button onclick="addClient()">Add booking</button>
+      </div>
+    </section>
+  </div>
+
+  <section>
+    <h2>Search customers by last name (all locations)</h2>
+    <form class="row" onsubmit="search(); return false">
+      <input id="prefix" placeholder="Last name starts with" aria-label="Last name starts with">
+      <button>Search</button>
+    </form>
+    <table><thead><tr><th>Last name</th><th>First name</th><th>Age</th><th>Room</th><th>City</th></tr></thead>
+      <tbody id="results"></tbody></table>
+  </section>
+
+  <div id="status" role="status"></div>
+
+<script>
+let chain = null, selected = null;
+const $ = id => document.getElementById(id);
+const val = id => $(id).value;
+
+function say(message, isError) {
+  $('status').textContent = message;
+  $('status').className = isError ? 'error' : '';
+}
+
+function cell(row, value) { row.insertCell().textContent = value; }
+
+async function call(path, body) {
+  const response = await fetch('/api/' + path, {method: 'POST', body: JSON.stringify(body || {})});
+  const data = await response.json();
+  say(data.error || data.message, !response.ok);
+  return data;
+}
+
+async function act(action, body, clearResults) {
+  const data = await call(action, body);
+  if (data.state !== undefined) render(data.state);
+  if (!data.error && clearResults) $('results').replaceChildren();
+  return !data.error;
+}
+
+function render(state) {
+  chain = state;
+  $('title').textContent = chain ? 'Hotel chain: ' + chain.name : 'No hotel chain';
+  const sites = chain ? chain.sites : [];
+  if (!sites.some(s => s.city === selected)) selected = null;
+  $('sites').replaceChildren();
+  if (!sites.length) $('sites').insertRow().insertCell().textContent = chain ? 'No locations yet.' : '';
+  for (const site of sites) {
+    const row = $('sites').insertRow();
+    row.className = 'pick' + (site.city === selected ? ' selected' : '');
+    row.onclick = () => { selected = site.city; render(chain); };
+    cell(row, site.city);
+    cell(row, site.clients.length);
+  }
+  const site = sites.find(s => s.city === selected);
+  $('clients-title').textContent = site ? 'Customers at ' + site.city : 'Customers (select a location)';
+  $('clients').replaceChildren();
+  for (const c of site ? site.clients : []) {
+    const row = $('clients').insertRow();
+    [c.last_name, c.first_name, c.age, c.room].forEach(v => cell(row, v));
+    const del = document.createElement('button');
+    del.className = 'danger';
+    del.textContent = 'Delete';
+    del.onclick = () => act('delete_client', {city: site.city, last_name: c.last_name, first_name: c.first_name}, true);
+    row.insertCell().append(del);
+  }
+}
+
+async function addSite() {
+  const city = val('city').trim();
+  if (await act('add_site', {city})) { selected = city; render(chain); $('city').value = ''; }
+}
+
+async function deleteSite() {
+  if (!selected) return say('Select a location first.', true);
+  if (confirm(`Delete ${selected} and all its bookings?`)) act('delete_site', {city: selected}, true);
+}
+
+async function addClient() {
+  if (!selected) return say('Select a location first.', true);
+  const ids = ['last_name', 'first_name', 'age', 'room'];
+  const body = {city: selected};
+  ids.forEach(id => body[id] = val(id));
+  if (await act('add_client', body)) ids.forEach(id => $(id).value = '');
+}
+
+async function search() {
+  const data = await call('search', {prefix: val('prefix')});
+  $('results').replaceChildren();
+  for (const r of data.results || []) {
+    const row = $('results').insertRow();
+    [r.last_name, r.first_name, r.age, r.room, r.city].forEach(v => cell(row, v));
+  }
+}
+
+// creating a new chain deletes the old one, so ask first
+function createChain() {
+  if (chain && !confirm('This deletes the current chain and all its bookings. Continue?')) return;
+  act('create', {name: val('chain')}, true);
+}
+
+fetch('/api/state').then(r => r.json()).then(d => render(d.state));
+</script>
+</body>
+</html>

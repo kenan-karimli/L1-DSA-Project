@@ -4,9 +4,10 @@
 #include <string.h>
 
 #define MAX_NAME      50
-#define BOOKINGS_FILE "data/bookings.txt"   /* processingfile takes no filename in the statement */
+#define BOOKINGS_FILE "data/bookings.txt"   /* processingfile has no filename param in the subject so we hardcode it */
+#define SAVE_FILE     "data/saved_chain.txt"  /* saveHotel writes here (same format as bookings.txt) */
 
-/* strings are heap-allocated with copyString and freed with their node */
+/* names are malloc'd with copyString, we free them when we free the node */
 typedef struct Client {
     char          *last_name;
     char          *first_name;
@@ -27,7 +28,8 @@ typedef struct Hotel {
     T_Site *first;
 } T_Hotel;
 
-/* our addition for searchClients: points into existing nodes, copies nothing */
+/* not in the subject, we added it for searchClients.
+   it just points to clients that already exist, nothing is copied */
 typedef struct Result {
     T_Client      *client;
     char          *city;

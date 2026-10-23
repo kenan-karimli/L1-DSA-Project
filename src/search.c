@@ -3,7 +3,7 @@
 #include "client.h"
 #include "hotel.h"
 
-/* Case-insensitive, so "dup" finds DUPOND and Dupont */
+/* not case sensitive, so "dup" finds DUPOND and Dupont */
 static int search_startsWith(const char *name, const char *prefix)
 {
     while (*prefix) {
@@ -15,7 +15,7 @@ static int search_startsWith(const char *name, const char *prefix)
     return 1;
 }
 
-/* Sorted insert by last name, first name, then city */
+/* sorted insert: last name, first name, then city */
 static int search_insertResult(T_Result **head, T_Client *client, char *city)
 {
     T_Result *newResult = malloc(sizeof(T_Result));
@@ -43,8 +43,8 @@ static int search_insertResult(T_Result **head, T_Client *client, char *city)
     return 1;
 }
 
-/* Every client whose last name starts with critereaName, across all sites, sorted.
- * The result points into the hotel's nodes; free it with freeResults only. */
+/* returns a sorted list of all clients (from every site) whose last name starts with critereaName.
+ * careful: the list points to the real clients, so free it with freeResults and NOT freeClients */
 T_Result *findClients(T_Hotel *hotel, char *critereaName)
 {
     T_Result *results = NULL;
@@ -84,7 +84,7 @@ void searchClients(T_Hotel *hotel, char *critereaName)
     freeResults(results);
 }
 
-/* Frees only the result nodes, never the clients or cities they point to */
+/* only frees the result nodes, the clients/cities belong to the hotel */
 void freeResults(T_Result *head)
 {
     T_Result *temp;

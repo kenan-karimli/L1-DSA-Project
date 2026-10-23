@@ -19,13 +19,14 @@ T_Hotel *createHotel(char *name)
     return newHotel;
 }
 
-/* Prints "| text" padded to width characters. printf pads by bytes,
- * so accented letters (2 bytes in UTF-8) would shift the table border. */
+/* prints "| text" + spaces until width.
+ * we cant just use %-20s because printf counts bytes, and letters like é are 2 bytes
+ * in UTF-8, so the table was broken for names with accents */
 void printCell(const char *text, int width)
 {
     int chars = 0;
     for (const char *p = text; *p; p++)
-        if (((unsigned char)*p & 0xC0) != 0x80)   /* skip UTF-8 continuation bytes */
+        if (((unsigned char)*p & 0xC0) != 0x80)   /* dont count the 2nd byte of é etc */
             chars++;
     printf("| %s%*s ", text, width > chars ? width - chars : 0, "");
 }

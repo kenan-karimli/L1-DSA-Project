@@ -21,7 +21,7 @@ void test_search(void)
     addClient(paris, createClient("MARTIN", "Alain", 42, 112));
     addClient(lille, createClient("DUPONT", "Amelie", 28, 17));
 
-    /* sorted across sites, case-insensitive prefix, MARTIN left out */
+    /* should be sorted even across sites, "du" matches DU..., MARTIN shouldnt be there */
     const char *expected[] = {"DUPOND", "Agathe", "Bordeaux", "DUPOND", "Francois", "Paris",
                               "DUPONT", "Amelie", "Lille", "DURAND", "Antoine", "Paris",
                               "DUVAL", "Magali", "Bordeaux"};

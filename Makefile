@@ -9,18 +9,18 @@ SUBMIT_DIR = submit
 LIB_SO    = $(BUILD_DIR)/libhotel.so
 PYTHON   ?= python3
 
-# Every src/*.c is picked up automatically; main.c is left out of the tests
+# all .c files in src/ get compiled, main.c is not used for tests (tests have their own main)
 SRC      = $(wildcard src/*.c)
 LIB_SRC  = $(filter-out src/main.c,$(SRC))
 TEST_SRC = $(wildcard tests/*.c)
-# tp3.h first: every other header depends on its structs
+# tp3.h has to be first, the other headers need the structs
 HDR      = include/tp3.h $(filter-out include/tp3.h,$(wildcard include/*.h))
 
 OBJ      = $(SRC:%.c=$(BUILD_DIR)/%.o)
 LIB_OBJ  = $(LIB_SRC:%.c=$(BUILD_DIR)/%.o)
 TEST_OBJ = $(TEST_SRC:%.c=$(BUILD_DIR)/%.o)
 
-.PHONY: all run test debug clean submit lib gui
+.PHONY: all run test debug clean submit lib gui web
 
 all: $(APP)
 
@@ -36,16 +36,20 @@ $(BUILD_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Shared library for the Python GUI (gui/hotel_gui.py loads it with ctypes)
+# .so for the python GUI (it loads it with ctypes)
 $(LIB_SO): $(LIB_SRC) $(wildcard include/*.h)
 	@mkdir -p $(dir $@)
 	$(CC) -Wall -Wextra -std=c11 -Iinclude -fPIC -shared $(LIB_SRC) -o $@
 
 lib: $(LIB_SO)
 
-# Needs a Python with tkinter, e.g. make gui PYTHON=~/miniconda3/bin/python3
+# needs python with tkinter, for me: make gui PYTHON=~/miniconda3/bin/python3
 gui: $(LIB_SO)
 	$(PYTHON) gui/hotel_gui.py
+
+# web version, opens on http://127.0.0.1:8000 (no tkinter needed)
+web: $(LIB_SO)
+	$(PYTHON) gui/hotel_web.py
 
 run: $(APP)
 	./$(APP)
@@ -53,11 +57,12 @@ run: $(APP)
 test: $(TEST_BIN)
 	./$(TEST_BIN)
 
-# Build into build/debug with sanitizers: crashes on leaks, overflows, use-after-free
+# debug build with address sanitizer, it crashes if we have leaks / bad memory access
 debug:
 	$(MAKE) BUILD_DIR=$(BUILD_DIR)/debug CFLAGS="$(CFLAGS) -fsanitize=address,undefined" LDFLAGS="-fsanitize=address,undefined" all test
 
-# Merge the modules into the 3 files the statement asks for, then prove they compile on their own
+# we have to submit only tp3.h, tp3.c and main.c so this glues all our files together
+# and compiles them to make sure it still works
 submit:
 	@rm -rf $(SUBMIT_DIR) && mkdir -p $(SUBMIT_DIR) $(BUILD_DIR)
 	{ echo '#pragma once'; for f in $(HDR); do echo "/* ---- $$f ---- */"; sed '/^#pragma once/d; /^#include "/d' $$f; done; } > $(SUBMIT_DIR)/tp3.h
