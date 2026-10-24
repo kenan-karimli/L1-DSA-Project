@@ -46,14 +46,16 @@ pending = None   # a password protected file waiting for its password
 
 
 class BadRequest(Exception):
-    pass
+    """Error with a message that is shown on the page."""
 
 
 def ok_text(value):
+    """Return True if value is a valid name (not empty, short, no ';' or newline)."""
     return bool(value) and len(value.encode()) <= MAX_TEXT and not any(c in value for c in ";\r\n")
 
 
 def field(body, key):
+    """Return body[key] as bytes for C, or raise BadRequest if it is not a valid name."""
     value = str(body.get(key, "")).strip()
     if not value:
         raise BadRequest(f"Type a {key.replace('_', ' ')}.")
@@ -64,6 +66,7 @@ def field(body, key):
 
 
 def number(body, key, low, high):
+    """Return body[key] as an int between low and high, or raise BadRequest."""
     try:
         value = int(body.get(key))
     except (TypeError, ValueError):
@@ -74,18 +77,21 @@ def number(body, key, low, high):
 
 
 def need_account():
+    """Return the logged in login, or raise BadRequest."""
     if not account:
         raise BadRequest("Log in first.")
     return account
 
 
 def need_hotel():
+    """Return the open chain, or raise BadRequest."""
     if not hotel:
         raise BadRequest("Open a chain first.")
     return hotel
 
 
 def need_site(body):
+    """Return the C site of body['city'], or raise BadRequest."""
     site = lib.findSite(need_hotel(), field(body, "city"))
     if not site:
         raise BadRequest("No such location.")
@@ -93,10 +99,12 @@ def need_site(body):
 
 
 def total_clients():
+    """Return the number of bookings in the open chain."""
     return sum(site.number_clients for site in walk(hotel.contents.first)) if hotel else 0
 
 
 def state():
+    """Return the open chain as a dict for the page, or None."""
     if not hotel:
         return None
     return {
@@ -110,7 +118,7 @@ def state():
 
 
 def info():
-    """what the page needs to know to draw itself, sent with every answer"""
+    """Return everything the page needs to draw itself (sent with every answer)."""
     return {
         "state": state(),
         "user": account,
@@ -121,12 +129,14 @@ def info():
 
 # ---------- passwords ----------
 def make_hash(password):
+    """Return a salted pbkdf2 hash of the password."""
     salt = secrets.token_bytes(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, ITERATIONS)
     return f"pbkdf2${ITERATIONS}${salt.hex()}${digest.hex()}"
 
 
 def check_hash(password, stored):
+    """Return True if password matches the stored hash."""
     _, rounds, salt, digest = stored.split("$")
     mine = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt), int(rounds))
     return hmac.compare_digest(mine.hex(), digest)
@@ -136,7 +146,7 @@ DUMMY_HASH = make_hash("not a real password")   # so a wrong login takes as long
 
 
 def new_password(body, optional=False):
-    """password + password2 from the page. returns the hash, or "" if optional and both are empty"""
+    """Check password/password2 and return its hash ("" if optional and empty)."""
     password, password2 = str(body.get("password", "")), str(body.get("password2", ""))
     if optional and not password and not password2:
         return ""
@@ -149,8 +159,7 @@ def new_password(body, optional=False):
 
 # ---------- chain files ----------
 def parse(content):
-    """checks a chain / bookings file. returns (meta, sites, count) or raises BadRequest with the reason.
-    sites is {city: [(last, first, age, room), ...]}, meta is {"name", "hash"} or None for a plain bookings file"""
+    """Check a chain/bookings file. Return (meta, sites, count) or raise BadRequest."""
     def bad(n, why):
         raise BadRequest(f"Line {n}: {why}" if n else why)
 
@@ -199,13 +208,14 @@ def parse(content):
 
 
 def free_site(site):
+    """Free a site that addSite refused (like in main.c)."""
     # addSite failed so we have to free it ourselves (like in main.c)
     libc.free(ctypes.cast(site.contents.city, c_void_p))
     libc.free(ctypes.cast(site, c_void_p))
 
 
 def build(name, sites):
-    """makes a new C hotel from parsed sites, using only our C functions"""
+    """Build a new C hotel from parsed sites using our C functions."""
     new_hotel = lib.createHotel(name.encode())
     if not new_hotel:
         raise BadRequest("Out of memory.")
@@ -228,14 +238,17 @@ def build(name, sites):
 
 
 def safe_name(name):
+    """Turn a chain name into a safe file name."""
     return (re.sub(r"[^A-Za-z0-9_-]+", "_", name) or "chain") + ".txt"
 
 
 def account_dir():
+    """Return the folder of the logged in account."""
     return f"{CHAINS_DIR}/{need_account()}"
 
 
 def close_chain():
+    """Free the open chain."""
     global hotel, chain
     if hotel:
         lib.freeHotel(hotel)
@@ -243,12 +256,14 @@ def close_chain():
 
 
 def open_hotel(new_hotel, pass_hash, path, filename):
+    """Close the current chain and make new_hotel the open one."""
     close_chain()
     global hotel, chain
     hotel, chain = new_hotel, {"hash": pass_hash, "path": path, "filename": filename}
 
 
 def write_chain(path):
+    """Save the open chain to path with saveChainFile."""
     written = lib.saveChainFile(hotel, path.encode(), chain["hash"].encode())
     if written < 0:
         raise BadRequest(f"Cannot write {path}.")
@@ -256,7 +271,7 @@ def write_chain(path):
 
 
 def autosave(message):
-    """account chains are saved after every change"""
+    """Save account chains after every change, then return message."""
     if hotel and chain["path"]:
         try:
             write_chain(chain["path"])
@@ -266,6 +281,7 @@ def autosave(message):
 
 
 def read_accounts():
+    """Return {login: hash} from the accounts file."""
     try:
         with open(ACCOUNTS_FILE, encoding="utf-8") as accounts:
             return dict(line.rstrip("\n").split(";", 1) for line in accounts if ";" in line)
@@ -275,6 +291,7 @@ def read_accounts():
 
 # ---------- accounts ----------
 def signup(body):
+    """Create an account and log in."""
     global account
     login = str(body.get("login", "")).strip()
     if not LOGIN_RE.fullmatch(login):
@@ -291,6 +308,7 @@ def signup(body):
 
 
 def login(body):
+    """Log in with login and password."""
     global account
     user, password = str(body.get("login", "")).strip(), str(body.get("password", ""))
     if not user or not password:
@@ -305,6 +323,7 @@ def login(body):
 
 
 def logout(_body):
+    """Log out and close the chain."""
     global account, pending
     close_chain()
     account = pending = None
@@ -313,6 +332,7 @@ def logout(_body):
 
 # ---------- my chains ----------
 def list_chains(_body):
+    """Return the chains saved in the account."""
     folder = account_dir()
     chains = []
     for file in sorted(os.listdir(folder)) if os.path.isdir(folder) else []:
@@ -330,6 +350,7 @@ def list_chains(_body):
 
 
 def chain_path(body):
+    """Return the path of body['file'] in the account, or raise BadRequest."""
     file = str(body.get("file", ""))
     path = f"{account_dir()}/{file}"
     if not CHAIN_FILE_RE.fullmatch(file) or not os.path.isfile(path):
@@ -338,6 +359,7 @@ def chain_path(body):
 
 
 def new_chain(body):
+    """Create a new empty chain in the account."""
     folder = account_dir()
     name = str(body.get("name", "")).strip()
     if not ok_text(name):
@@ -353,6 +375,7 @@ def new_chain(body):
 
 
 def open_chain(body):
+    """Open a chain saved in the account."""
     path = chain_path(body)
     with open(path, encoding="utf-8") as saved:
         meta, sites, count = parse(saved.read())
@@ -363,6 +386,7 @@ def open_chain(body):
 
 
 def delete_chain(body):
+    """Delete a chain file from the account."""
     path = chain_path(body)
     if hotel and chain["path"] == path:
         close_chain()
@@ -372,7 +396,7 @@ def delete_chain(body):
 
 # ---------- open a file ----------
 def import_path(name):
-    """a free file in the account folder for an imported chain: "Name", "Name (2)", ..."""
+    """Return a free name and path for an imported chain: Name, Name (2), ..."""
     folder = account_dir()
     os.makedirs(folder, exist_ok=True)
     candidate, n = name, 2
@@ -386,7 +410,7 @@ def import_path(name):
 
 
 def finish_open(meta, sites, count, filename):
-    """opens a checked file, as a guest or copied into the account"""
+    """Open a checked file, as a guest or copied into the account."""
     name = meta["name"] if meta else re.sub(r"[_\-;\r\n]+", " ", os.path.splitext(filename)[0]).strip()
     while name and not ok_text(name):
         name = name[:-1]
@@ -403,6 +427,7 @@ def finish_open(meta, sites, count, filename):
 
 
 def open_file(body):
+    """Check an uploaded file, ask for its password if it has one."""
     global pending
     name = str(body.get("filename", "")).strip() or "file"
     if not re.search(r"\.(txt|csv)$", name, re.IGNORECASE):
@@ -420,6 +445,7 @@ def open_file(body):
 
 
 def unlock(body):
+    """Open the pending file if the password is right."""
     global pending
     if not pending:
         raise BadRequest("Choose a file first.")
@@ -433,19 +459,21 @@ def unlock(body):
 
 
 def close(_body):
+    """Close the open chain."""
     need_hotel()
     close_chain()
     return "Chain closed."
 
 
 def set_file_password(body):
+    """Set or remove the file password of the open chain."""
     need_hotel()
     chain["hash"] = new_password(body, optional=True)
     return autosave("File password set." if chain["hash"] else "File password removed.")
 
 
 def save(_body):
-    """gives the page the chain file to download (and saves it to the account too)"""
+    """Return the chain file for download (and save it to the account)."""
     need_hotel()
     filename = chain["filename"] or safe_name(text(hotel.contents.name))
     if not filename.lower().endswith(".txt"):
@@ -461,6 +489,7 @@ def save(_body):
 
 # ---------- app actions: each gets the json from the page and returns the message to show ----------
 def add_site(body):
+    """Add a location."""
     city = field(body, "city")
     if lib.findSite(need_hotel(), city):
         raise BadRequest(f"Location {city.decode()} already exists.")
@@ -474,6 +503,7 @@ def add_site(body):
 
 
 def delete_site(body):
+    """Delete a location with all its bookings."""
     city = field(body, "city")
     if not lib.deleteSite(need_hotel(), city):
         raise BadRequest(f"No location in {city.decode()}.")
@@ -481,6 +511,7 @@ def delete_site(body):
 
 
 def add_client(body):
+    """Add a booking at a location."""
     site = need_site(body)
     last, first = field(body, "last_name"), field(body, "first_name")
     age, room = number(body, "age", 0, 150), number(body, "room", 1, 99999)
@@ -494,6 +525,7 @@ def add_client(body):
 
 
 def delete_client(body):
+    """Delete a booking."""
     site = need_site(body)
     last, first = field(body, "last_name"), field(body, "first_name")
     if not lib.deleteClient(site, last, first):
@@ -502,6 +534,7 @@ def delete_client(body):
 
 
 def load_file(_body):
+    """Load data/bookings.txt with processingfile."""
     need_hotel()
     before = total_clients()
     lib.processingfile(hotel)   # skipped lines get printed in the terminal
@@ -509,6 +542,7 @@ def load_file(_body):
 
 
 def search(body):
+    """Return customers whose last name starts with body['prefix']."""
     results = lib.findClients(need_hotel(), str(body.get("prefix", "")).strip().encode())
     found = [{"last_name": text(r.client.contents.last_name), "first_name": text(r.client.contents.first_name),
               "age": r.client.contents.age, "room": r.client.contents.num_room, "city": text(r.city)}
@@ -530,7 +564,9 @@ RAW_ACTIONS = {"chains": list_chains, "open": open_file, "save": save, "search":
 
 
 class Handler(BaseHTTPRequestHandler):
+    """Answers the page: GET for the HTML, POST /api/<action> for actions."""
     def send(self, code, payload, content_type="application/json"):
+        """Send a JSON (or bytes) answer."""
         data = payload if isinstance(payload, bytes) else json.dumps(payload).encode()
         self.send_response(code)
         self.send_header("Content-Type", content_type)
@@ -540,6 +576,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):
+        """Serve the page and the current state."""
         if self.path == "/":
             with open(PAGE, "rb") as page:
                 self.send(200, page.read(), "text/html; charset=utf-8")
@@ -549,6 +586,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send(404, {"error": "Not found."})
 
     def do_POST(self):
+        """Run an action and send back its answer and the new state."""
         name = self.path.removeprefix("/api/")
         action, raw = ACTIONS.get(name), RAW_ACTIONS.get(name)
         if not action and not raw:
@@ -566,6 +604,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    """Start the web server on HOST:PORT."""
     os.chdir(ROOT)   # so the C code finds data/
     server = HTTPServer((HOST, PORT), Handler)
     print(f"Hotel chain web app on http://{HOST}:{PORT}  (Ctrl+C to stop)")

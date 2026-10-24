@@ -1,0 +1,17 @@
+#HOTEL;UFAZ Hotels;ufaz;9af83a825cc613932773f8641c6eb0748d19f871ea89f60e31f685c1d69fe695
+#SITE;Bordeaux
+#SITE;Lille
+#SITE;Lyon
+#SITE;Paris
+#SITE;Toulouse
+LastName;FirstName;Age;Room Number;City
+ANTOINE;Michel;40;38;Bordeaux
+DUPOND;Agathe;23;12;Bordeaux
+DUVAL;Magali;40;38;Bordeaux
+DUPONT;Amélie;28;17;Lille
+MARTIN;Lucie;32;45;Lille
+LECLERC;Denis;25;112;Lyon
+DUPOND;François;35;29;Paris
+DURAND;Antoine;42;15;Paris
+MARTIN;Alain;42;112;Paris
+DUPOND;Antoine;42;25;Toulouse

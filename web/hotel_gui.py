@@ -19,7 +19,9 @@ from hotel_lib import ROOT, SAVE_FILE, load_library, text, walk
 
 
 class HotelApp(tk.Tk):
+    """Main tkinter window. Shows the C lists in two tables."""
     def __init__(self, lib):
+        """Keep the C library and build the window."""
         super().__init__()
         self.lib = lib
         self.libc = ctypes.CDLL(None)
@@ -35,6 +37,7 @@ class HotelApp(tk.Tk):
 
     # building the window
     def build_ui(self):
+        """Create all widgets of the window."""
         pad = {"padx": 6, "pady": 4}
 
         top = ttk.Frame(self)
@@ -98,6 +101,7 @@ class HotelApp(tk.Tk):
 
     @staticmethod
     def make_table(parent, columns, widths, height=10):
+        """Create a Treeview table with a scrollbar."""
         frame = ttk.Frame(parent)
         frame.pack(fill="both", expand=True, padx=6, pady=4)
         tree = ttk.Treeview(frame, columns=columns, show="headings", height=height, selectmode="browse")
@@ -111,18 +115,22 @@ class HotelApp(tk.Tk):
         return tree
 
     def say(self, message):
+        """Show a message in the status bar."""
         self.status.config(text=" " + message)
 
     def need_hotel(self):
+        """Return True if a chain exists, otherwise show a message."""
         if not self.hotel:
             self.say("Create a hotel chain first.")
         return bool(self.hotel)
 
     def selected_city(self):
+        """Return the city selected in the locations table, or None."""
         selection = self.sites.selection()
         return self.sites.item(selection[0], "values")[0] if selection else None
 
     def selected_site(self):
+        """Return the C site of the selected city, or None."""
         city = self.selected_city()
         if not self.hotel or city is None:
             return None
@@ -130,10 +138,12 @@ class HotelApp(tk.Tk):
         return site if site else None
 
     def total_clients(self):
+        """Return the number of bookings in the whole chain."""
         return sum(site.number_clients for site in walk(self.hotel.contents.first)) if self.hotel else 0
 
     # redraw tables after every change
     def refresh(self, select_city=None):
+        """Redraw the locations table (and the customers table)."""
         keep = select_city or self.selected_city()
         self.sites.delete(*self.sites.get_children())
         if self.hotel:
@@ -148,6 +158,7 @@ class HotelApp(tk.Tk):
         self.refresh_clients()
 
     def refresh_clients(self):
+        """Redraw the customers table for the selected location."""
         self.clients.delete(*self.clients.get_children())
         site = self.selected_site()
         if not site:
@@ -160,6 +171,7 @@ class HotelApp(tk.Tk):
 
     # button handlers
     def on_create_chain(self):
+        """Create a new chain (replaces the old one)."""
         name = self.chain_entry.get().strip()
         if not name:
             self.say("Type a chain name first.")
@@ -179,6 +191,7 @@ class HotelApp(tk.Tk):
         self.say(f"Hotel chain {name} created.")
 
     def on_add_site(self):
+        """Add the typed city as a new location."""
         city = self.city_entry.get().strip()
         if not self.need_hotel():
             return
@@ -203,6 +216,7 @@ class HotelApp(tk.Tk):
         self.say(f"Location {city} added.")
 
     def on_delete_site(self):
+        """Delete the selected location with all its bookings."""
         city = self.selected_city()
         if not self.need_hotel() or city is None:
             self.say("Select a location first.")
@@ -217,6 +231,7 @@ class HotelApp(tk.Tk):
         self.refresh()
 
     def on_add_client(self):
+        """Add a booking at the selected location."""
         site = self.selected_site()
         if not self.need_hotel():
             return
@@ -251,6 +266,7 @@ class HotelApp(tk.Tk):
         self.say(f"Booking for {last} {first} added.")
 
     def on_delete_client(self):
+        """Delete the selected booking."""
         site = self.selected_site()
         selection = self.clients.selection()
         if not site or not selection:
@@ -263,6 +279,7 @@ class HotelApp(tk.Tk):
         self.refresh()
 
     def on_search(self):
+        """Search customers by the start of their last name."""
         self.results.delete(*self.results.get_children())
         prefix = self.search_entry.get().strip()
         if not self.need_hotel():
@@ -278,6 +295,7 @@ class HotelApp(tk.Tk):
         self.say(f"{count} customer(s) found.")
 
     def on_load_file(self):
+        """Load data/bookings.txt with processingfile."""
         if not self.need_hotel():
             return
         before = self.total_clients()
@@ -286,12 +304,14 @@ class HotelApp(tk.Tk):
         self.say(f"{self.total_clients() - before} booking(s) loaded from data/bookings.txt.")
 
     def on_save(self):
+        """Save all bookings to SAVE_FILE with saveHotel."""
         if not self.need_hotel():
             return
         written = self.lib.saveHotel(self.hotel, SAVE_FILE.encode())
         self.say(f"Cannot write {SAVE_FILE}." if written < 0 else f"{written} booking(s) saved to {SAVE_FILE}.")
 
     def on_load_saved(self):
+        """Load SAVE_FILE back with loadBookings."""
         if not self.need_hotel():
             return
         before = self.total_clients()
@@ -300,6 +320,7 @@ class HotelApp(tk.Tk):
         self.say(f"{self.total_clients() - before} booking(s) loaded from {SAVE_FILE}.")
 
     def on_close(self):
+        """Free the C memory and close the window."""
         if self.hotel:
             self.lib.freeHotel(self.hotel)
             self.hotel = None
@@ -307,6 +328,7 @@ class HotelApp(tk.Tk):
 
 
 def main():
+    """Start the tkinter app from the project folder."""
     os.chdir(ROOT)   # so data/bookings.txt is found
     HotelApp(load_library()).mainloop()
 

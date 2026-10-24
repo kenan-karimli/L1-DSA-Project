@@ -1,5 +1,7 @@
-# loads our C code (build/libhotel.so, do `make lib` first) with ctypes
-# used by both hotel_gui.py and hotel_web.py
+"""Load our C code (build/libhotel.so, run `make lib` first) with ctypes.
+
+Used by both hotel_gui.py and hotel_web.py.
+"""
 
 import ctypes
 import os
@@ -8,10 +10,10 @@ from ctypes import POINTER, Structure, c_char_p, c_int
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LIB_PATH = os.path.join(ROOT, "build", "libhotel.so")
-SAVE_FILE = "data/saved_chain.txt"   # has to match SAVE_FILE in tp3.h
+SAVE_FILE = "data/saved_chain.txt"   # has to match SAVE_FILE in web.h
 
 
-# same structs as in tp3.h, the order of fields has to be exactly the same!
+# same structs as in submit/tp3.h, the order of fields has to be exactly the same!
 class Client(Structure):
     pass
 
@@ -53,6 +55,7 @@ Result._fields_ = [
 
 
 def load_library():
+    """Load build/libhotel.so and set the argument/return types of every C function."""
     if not os.path.exists(LIB_PATH):
         sys.exit(f"{LIB_PATH} not found. Build it first with: make lib")
     lib = ctypes.CDLL(LIB_PATH)
@@ -82,11 +85,12 @@ def load_library():
 
 
 def text(raw):
+    """Turn a C string (bytes or None) into a Python str."""
     return raw.decode("utf-8", errors="replace") if raw else ""
 
 
 def walk(node):
-    # goes through a C linked list, like for (temp = head; temp; temp = temp->next)
+    """Yield every node of a C linked list, like for (temp = head; temp; temp = temp->next)."""
     while node:
         yield node.contents
         node = node.contents.next

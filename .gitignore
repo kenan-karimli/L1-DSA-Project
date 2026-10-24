@@ -66,10 +66,7 @@ $RECYCLE.BIN/
 .claude/settings.local.json
 .env
 
-# --- Generated submission files (make submit) ---
-submit/
-
-# --- Saved chain (menu option 11, tkinter Save button) ---
+# --- Saved chain (tkinter Save button) ---
 data/saved_chain.txt
 
 # --- web app accounts and their chains (they have password hashes) ---

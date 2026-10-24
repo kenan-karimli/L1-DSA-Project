@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>Hotel Chain Manager · UFAZ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<script src="./hotel_sim.js"></script>
+<style>*{box-sizing:border-box}body{margin:0;background:#f5ede0;color:#2a2925;font:400 15px/1.5 "DM Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}a{color:#c3512d}a:hover{color:#2e4a3a}input::placeholder{color:#9a9384}input:focus{outline:none}input:not([data-bare]):focus{border-color:#2e4a3a !important;background:#fffaf2 !important}[data-pill]:focus-within{border-color:#2e4a3a !important;background:#fffaf2 !important}button:focus-visible{outline:2px solid #c3512d;outline-offset:2px}@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column">
+  <div style="max-width:1280px;width:100%;margin:0 auto;padding:24px 40px 0;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between">
+    <span style="font-size:13px;color:#6b675d">UFAZ · L1 Data Structures &amp; Algorithms · Final project</span>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      <button onClick="{{ loadFile }}" style="height:36px;padding:0 14px 0 12px;border:1px solid #d8cfbc;border-radius:18px;background:transparent;color:#2a2925;font:500 13px 'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;gap:8px" style-hover="background:#ebe3d1"><i class="ph-duotone ph-file-arrow-up" style="font-size:18px;color:#c3512d"></i>Load bookings file</button>
+      <button onClick="{{ save }}" style="height:36px;padding:0 14px 0 12px;border:1px solid #d8cfbc;border-radius:18px;background:transparent;color:#2a2925;font:500 13px 'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;gap:8px" style-hover="background:#ebe3d1"><i class="ph-duotone ph-floppy-disk" style="font-size:18px;color:#c3512d"></i>Save</button>
+      <button onClick="{{ loadSaved }}" style="height:36px;padding:0 14px 0 12px;border:1px solid #d8cfbc;border-radius:18px;background:transparent;color:#2a2925;font:500 13px 'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;gap:8px" style-hover="background:#ebe3d1"><i class="ph-duotone ph-clock-counter-clockwise" style="font-size:18px;color:#c3512d"></i>Load saved</button>
+    </div>
+  </div>
+
+  <header style="max-width:1280px;width:100%;margin:0 auto;padding:40px 40px 32px;display:flex;flex-wrap:wrap;gap:28px;align-items:flex-end;justify-content:space-between">
+    <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+      <span style="font-size:13px;color:#c3512d">Hotel chain</span>
+      <h1 style="margin:0;font:400 clamp(48px,7vw,84px)/1 'Instrument Serif',Georgia,serif;letter-spacing:-.01em;color:#2a2925;text-wrap:pretty">{{ heading }}</h1>
+      <span style="font-size:15px;color:#6b675d">{{ subheading }}</span>
+    </div>
+    <div style="display:flex;gap:8px;flex:0 1 420px;min-width:0">
+      <input placeholder="New chain name" aria-label="Chain name" value="{{ f.chain }}" onChange="{{ on.chain }}" onKeyDown="{{ keys.chain }}" style="flex:1;min-width:0;height:44px;padding:0 16px;border:1px solid #d8cfbc;border-radius:22px;background:#fbf6ec;font:400 15px 'DM Sans',sans-serif;color:#2a2925">
+      <button onClick="{{ createChain }}" style="height:44px;padding:0 20px 0 16px;border:0;border-radius:22px;background:#2e4a3a;color:#f5ede0;font:500 14px 'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap" style-hover="background:#233a2d"><i class="ph-duotone ph-buildings" style="font-size:18px"></i>Create chain</button>
+    </div>
+  </header>
+
+  <main style="flex:1;max-width:1280px;width:100%;margin:0 auto;padding:0 40px 120px;display:flex;flex-direction:column;gap:40px">
+    <section style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 24px;border-top:1px solid #d8cfbc;padding-top:24px">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <span style="font-size:13px;color:#c3512d">hotel-&gt;first · sorted by city</span>
+          <h2 style="margin:0;font:400 36px/1.1 'Instrument Serif',Georgia,serif">Locations</h2>
+        </div>
+        <span style="font-size:13px;color:#6b675d">Select a location to manage its bookings.</span>
+      </div>
+      <sc-if value="{{ noChain }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:10px;padding:20px;border:1px dashed #c9bfaa;border-radius:12px;color:#6b675d"><i class="ph-duotone ph-buildings" style="font-size:22px;color:#c3512d"></i>No chain yet. Create one above.</div>
+      </sc-if>
+      <sc-if value="{{ hasChain }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px">
+          <sc-for list="{{ sites }}" as="s" hint-placeholder-count="0">
+            <button onClick="{{ s.onPick }}" style="display:flex;flex-direction:column;align-items:flex-start;gap:18px;padding:16px 16px 14px;border:1px solid {{ s.border }};border-radius:12px;background:{{ s.bg }};color:{{ s.fg }};text-align:left;cursor:pointer;min-width:0" style-hover="border-color:#2e4a3a">
+              <span style="display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px">
+                <i class="ph-duotone ph-map-pin" style="font-size:22px;color:{{ s.icon }}"></i>
+                <span style="font:400 12px 'DM Mono',monospace;color:{{ s.sub }}">{{ s.count }} {{ s.unit }}</span>
+              </span>
+              <span style="font:400 30px/1.2 'Instrument Serif',Georgia,serif;margin-bottom:-4px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.city }}</span>
+            </button>
+          </sc-for>
+          <div style="display:flex;flex-direction:column;justify-content:space-between;gap:12px;padding:14px;border:1px dashed #c9bfaa;border-radius:12px;min-height:106px">
+            <span style="display:flex;align-items:center;gap:6px;font-size:13px;color:#6b675d"><i class="ph-duotone ph-plus-circle" style="font-size:18px;color:#c3512d"></i>New location</span>
+            <div style="display:flex;gap:6px">
+              <input placeholder="City" aria-label="City" value="{{ f.city }}" onChange="{{ on.city }}" onKeyDown="{{ keys.city }}" style="flex:1;min-width:0;height:36px;padding:0 12px;border:1px solid #d8cfbc;border-radius:18px;background:#fbf6ec;font:400 14px 'DM Sans',sans-serif;color:#2a2925">
+              <button onClick="{{ addSite }}" aria-label="Add location" title="Add location" style="width:36px;height:36px;flex:none;border:0;border-radius:18px;background:#2e4a3a;color:#f5ede0;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#233a2d"><i class="ph-duotone ph-plus" style="font-size:16px"></i></button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </section>
+
+    <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start">
+      <section style="flex:999 1 520px;min-width:0;background:#ebe4d2;border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font-size:13px;color:#c3512d">site-&gt;first</span>
+            <h2 style="margin:0;font:400 32px/1.1 'Instrument Serif',Georgia,serif">{{ clientsTitle }}</h2>
+          </div>
+          <sc-if value="{{ hasSelected }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ deleteSite }}" style="height:34px;padding:0 14px 0 10px;border:1px solid #d9a38f;border-radius:17px;background:transparent;color:#a8411f;font:500 13px 'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px" style-hover="background:#f3d9cc"><i class="ph-duotone ph-trash" style="font-size:16px"></i>Delete location</button>
+          </sc-if>
+        </div>
+        <div style="background:#f5ede0;border-radius:8px;overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:14px;min-width:480px">
+            <thead><tr>
+              <th style="text-align:left;padding:12px 16px;font:400 12px 'DM Mono',monospace;color:#6b675d;border-bottom:1px solid #ddd3bf">last_name</th>
+              <th style="text-align:left;padding:12px 12px;font:400 12px 'DM Mono',monospace;color:#6b675d;border-bottom:1px solid #ddd3bf">first_name</th>
+              <th style="text-align:right;padding:12px 12px;font:400 12px 'DM Mono',monospace;color:#6b675d;border-bottom:1px solid #ddd3bf">age</th>
+              <th style="text-align:right;padding:12px 12px;font:400 12px 'DM Mono',monospace;color:#6b675d;border-bottom:1px solid #ddd3bf">num_room</th>
+              <th style="width:52px;border-bottom:1px solid #ddd3bf"></th>
+            </tr></thead>
+            <tbody>
+              <sc-for list="{{ clients }}" as="c" hint-placeholder-count="0">
+                <tr style-hover="background:#fbf6ec">
+                  <td style="padding:11px 16px;border-bottom:1px solid #e7dfcd;font-weight:500">{{ c.last_name }}</td>
+                  <td style="padding:11px 12px;border-bottom:1px solid #e7dfcd">{{ c.first_name }}</td>
+                  <td style="padding:11px 12px;border-bottom:1px solid #e7dfcd;text-align:right;font-family:'DM Mono',monospace;font-size:13px">{{ c.age }}</td>
+                  <td style="padding:11px 12px;border-bottom:1px solid #e7dfcd;text-align:right;font-family:'DM Mono',monospace;font-size:13px">{{ c.room }}</td>
+                  <td style="padding:4px 10px 4px 0;border-bottom:1px solid #e7dfcd;text-align:right"><button onClick="{{ c.onDelete }}" title="Delete booking" aria-label="Delete booking" style="width:32px;height:32px;border:0;border-radius:16px;background:transparent;color:#9a9384;cursor:pointer;display:inline-flex;align-items:center;justify-content:center" style-hover="background:#f3d9cc;color:#a8411f"><i class="ph-duotone ph-trash" style="font-size:17px"></i></button></td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+          <sc-if value="{{ noSelected }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;align-items:center;gap:10px;padding:24px 16px;color:#6b675d"><i class="ph-duotone ph-hand-pointing" style="font-size:22px;color:#c3512d"></i>Pick a location in the list above.</div>
+          </sc-if>
+          <sc-if value="{{ noClients }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:10px;padding:24px 16px;color:#6b675d"><i class="ph-duotone ph-user-circle-dashed" style="font-size:22px;color:#c3512d"></i>No customers yet.</div>
+          </sc-if>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="display:flex;align-items:center;gap:6px;font-size:13px;color:#6b675d"><i class="ph-duotone ph-user-plus" style="font-size:16px;color:#c3512d"></i>New booking · inserted in sorted order</span>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <input placeholder="Last name" aria-label="Last name" value="{{ f.last_name }}" onChange="{{ on.last_name }}" onKeyDown="{{ keys.client }}" style="flex:1 1 130px;min-width:0;height:40px;padding:0 14px;border:1px solid #d8cfbc;border-radius:20px;background:#f5ede0;font:400 14px 'DM Sans',sans-serif;color:#2a2925">
+            <input placeholder="First name" aria-label="First name" value="{{ f.first_name }}" onChange="{{ on.first_name }}" onKeyDown="{{ keys.client }}" style="flex:1 1 130px;min-width:0;height:40px;padding:0 14px;border:1px solid #d8cfbc;border-radius:20px;background:#f5ede0;font:400 14px 'DM Sans',sans-serif;color:#2a2925">
+            <input type="number" min="0" max="150" placeholder="Age" aria-label="Age" value="{{ f.age }}" onChange="{{ on.age }}" onKeyDown="{{ keys.client }}" style="width:80px;height:40px;padding:0 14px;border:1px solid #d8cfbc;border-radius:20px;background:#f5ede0;font:400 14px 'DM Mono',monospace;color:#2a2925">
+            <input type="number" min="1" placeholder="Room" aria-label="Room" value="{{ f.room }}" onChange="{{ on.room }}" onKeyDown="{{ keys.client }}" style="width:92px;height:40px;padding:0 14px;border:1px solid #d8cfbc;border-radius:20px;background:#f5ede0;font:400 14px 'DM Mono',monospace;color:#2a2925">
+            <button onClick="{{ addClient }}" style="height:40px;padding:0 18px 0 14px;border:0;border-radius:20px;background:#2e4a3a;color:#f5ede0;font:500 14px 'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;gap:8px" style-hover="background:#233a2d"><i class="ph-duotone ph-plus" style="font-size:16px"></i>Add booking</button>
+          </div>
+        </div>
+      </section>
+
+      <section style="flex:1 1 340px;min-width:0;background:#ebe4d2;border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <span style="font-size:13px;color:#c3512d">findClients</span>
+          <h2 style="margin:0;font:400 32px/1.1 'Instrument Serif',Georgia,serif">Search by last name</h2>
+          <span style="font-size:13px;color:#6b675d">All locations, not case sensitive.</span>
+        </div>
+        <form onSubmit="{{ search }}" style="display:flex;gap:8px">
+          <div data-pill="1" style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:40px;padding:0 6px 0 14px;border:1px solid #d8cfbc;border-radius:20px;background:#f5ede0">
+            <i class="ph-duotone ph-magnifying-glass" style="font-size:17px;color:#c3512d"></i>
+            <input data-bare="1" placeholder="e.g. dup" aria-label="Last name starts with" value="{{ f.prefix }}" onChange="{{ on.prefix }}" style="flex:1;min-width:0;height:36px;padding:0;border:0;outline:none;background:transparent;font:400 14px 'DM Sans',sans-serif;color:#2a2925">
+          </div>
+          <button style="height:40px;padding:0 18px;border:0;border-radius:20px;background:#2e4a3a;color:#f5ede0;font:500 14px 'DM Sans',sans-serif;cursor:pointer" style-hover="background:#233a2d">Search</button>
+        </form>
+        <sc-if value="{{ hasResults }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <sc-for list="{{ results }}" as="r" hint-placeholder-count="0">
+              <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:#f5ede0;border-radius:8px">
+                <i class="ph-duotone ph-user" style="font-size:18px;color:#2e4a3a"></i>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+                  <span style="font-weight:500">{{ r.last_name }} {{ r.first_name }}</span>
+                  <span style="font:400 12px 'DM Mono',monospace;color:#6b675d">age {{ r.age }} · room {{ r.room }}</span>
+                </div>
+                <span style="height:26px;padding:0 10px 0 8px;border-radius:13px;background:#2e4a3a;color:#f5ede0;display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap"><i class="ph-duotone ph-map-pin" style="font-size:13px"></i>{{ r.city }}</span>
+              </div>
+            </sc-for>
+            <button onClick="{{ clearSearch }}" style="align-self:flex-start;margin-top:4px;height:30px;padding:0 12px;border:0;border-radius:15px;background:transparent;color:#c3512d;font:500 13px 'DM Sans',sans-serif;cursor:pointer" style-hover="background:#e2d9c4">Clear results</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:10px;padding:14px 12px;background:#f5ede0;border-radius:8px;color:#6b675d"><i class="ph-duotone ph-prohibit" style="font-size:20px;color:#c3512d"></i>No customer matches that prefix.</div>
+        </sc-if>
+      </section>
+    </div>
+  </main>
+</div>
+
+<sc-if value="{{ hasStatus }}" hint-placeholder-val="{{ false }}">
+  <div role="status" style="position:fixed;left:24px;bottom:24px;z-index:20;max-width:min(460px,calc(100vw - 48px));display:flex;align-items:center;gap:12px;padding:10px 8px 10px 16px;background:{{ toastBg }};color:#f5ede0;border-radius:24px;box-shadow:0 10px 30px rgba(46,74,58,.25);animation:toastIn .2s ease-out">
+    <i class="ph-duotone {{ toastIcon }}" style="font-size:20px"></i>
+    <span style="flex:1;font:400 13px/1.4 'DM Mono',monospace">{{ status }}</span>
+    <button onClick="{{ dismiss }}" aria-label="Dismiss" style="width:30px;height:30px;border:0;border-radius:15px;background:rgba(245,237,224,.12);color:#f5ede0;cursor:pointer;display:flex;align-items:center;justify-content:center"><i class="ph-duotone ph-x" style="font-size:14px"></i></button>
+  </div>
+</sc-if>
+
+<sc-if value="{{ confirmOpen }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;z-index:30;background:rgba(42,41,37,.35);display:flex;align-items:center;justify-content:center;padding:24px">
+    <div role="alertdialog" style="background:#f5ede0;border-radius:16px;width:100%;max-width:420px;padding:28px;display:flex;flex-direction:column;gap:16px;box-shadow:0 24px 60px rgba(42,41,37,.25)">
+      <i class="ph-duotone ph-warning-circle" style="font-size:32px;color:#c3512d"></i>
+      <h3 style="margin:0;font:400 32px/1.1 'Instrument Serif',Georgia,serif">Are you sure?</h3>
+      <p style="margin:0;color:#2a2925">{{ confirmText }}</p>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
+        <button onClick="{{ confirmNo }}" style="height:40px;padding:0 18px;border:1px solid #d8cfbc;border-radius:20px;background:transparent;color:#2a2925;font:500 14px 'DM Sans',sans-serif;cursor:pointer" style-hover="background:#ebe3d1">Cancel</button>
+        <button onClick="{{ confirmYes }}" style="height:40px;padding:0 18px;border:0;border-radius:20px;background:#c3512d;color:#fff;font:500 14px 'DM Sans',sans-serif;cursor:pointer" style-hover="background:#a8411f">Delete</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startWithSample&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = { ready: false };
+  init() {
+    const s = window.hotelInitial();
+    if (this.props.startWithSample ?? true) {
+      s.chain = window.hotelSeed('UFAZ Hotels');
+      s.selected = s.chain.sites[0] ? s.chain.sites[0].city : null;
+    }
+    this.setState({ ...s, ready: true });
+  }
+  componentDidMount() {
+    if (window.hotelInitial) return this.init();
+    const t = setInterval(() => { if (window.hotelInitial) { clearInterval(t); this.init(); } }, 30);
+  }
+  renderVals() {
+    if (!this.state.ready) return { heading: 'Hotel chain', f: {}, on: {}, keys: {}, noSelected: true };
+    const v = window.hotelVals(this, { selBg: '#c3512d', selFg: '#ffffff', selSub: '#ffffff', fg: '#f5ede0', sub: '#f5ede0', bad: '#f5ede0', ok: '#f5ede0' });
+    const sites = v.sites.map(s => ({
+      ...s,
+      bg: s.sel ? '#2e4a3a' : '#fbf6ec',
+      fg: s.sel ? '#f5ede0' : '#2a2925',
+      sub: s.sel ? '#c9d3cb' : '#6b675d',
+      icon: s.sel ? '#f5ede0' : '#c3512d',
+      border: s.sel ? '#2e4a3a' : '#e2d9c6',
+      unit: s.count === 1 ? 'customer' : 'customers',
+    }));
+    return {
+      ...v, sites,
+      heading: v.hasChain ? v.chainName : 'No hotel chain',
+      subheading: v.hasChain ? `${v.totalLocations} locations · ${v.totalCustomers} customers` : 'Create a chain to start adding locations and bookings.',
+      toastBg: v.statusErr ? '#a8411f' : '#2e4a3a',
+      toastIcon: v.statusErr ? 'ph-warning-circle' : 'ph-check-circle',
+    };
+  }
+}
+</script>
+</body>
+</html>
